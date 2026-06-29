@@ -1,9 +1,13 @@
+// 职责：在压力测试场景中绘制区块边界和活跃区域覆盖层，帮助观察优化效果。
+// Responsibility: Draws chunk boundaries and active-region overlays in the stress-test scene to visualize optimization behavior.
 using UnityEngine;
 
 namespace NoitaCA
 {
     public sealed class StressTestDebugOverlay : MonoBehaviour
     {
+        // 限制活跃像素矩形数量，避免调试绘制本身拖垮性能。
+        // Limit active-pixel rectangles so debug drawing does not dominate performance.
         private const int MaxActivePixelRects = 8000;
         private static Texture2D whiteTexture;
 
@@ -12,6 +16,8 @@ namespace NoitaCA
 
         public void Initialize(StressTestBootstrap stressTestBootstrap, Camera cameraToUse)
         {
+            // 覆盖层只读取启动器、网格和相机状态。
+            // The overlay only reads bootstrap, grid, and camera state.
             bootstrap = stressTestBootstrap;
             targetCamera = cameraToUse;
             EnsureTexture();
@@ -24,6 +30,8 @@ namespace NoitaCA
                 return;
             }
 
+            // 根据配置独立绘制区块线和活跃区域。
+            // Draw chunk lines and active regions independently based on config.
             StressTestConfig config = bootstrap.Config;
             if (config.showChunkBoundaries)
             {
@@ -38,6 +46,8 @@ namespace NoitaCA
 
         private void DrawChunkBoundaries()
         {
+            // 按当前区块尺寸把整张网格划成 GUI 矩形。
+            // Split the grid into GUI rectangles using the current chunk size.
             PixelGrid grid = bootstrap.Grid;
             Color lineColor = new Color(1f, 1f, 1f, 0.22f);
             for (int cy = 0; cy < grid.ChunkRows; cy++)
@@ -55,6 +65,8 @@ namespace NoitaCA
             PixelGrid grid = bootstrap.Grid;
             if (bootstrap.Mode == PixelSimulationMode.ChunkBased)
             {
+                // 区块模式下高亮活跃区块。
+                // In chunk mode, highlight active chunks.
                 for (int i = 0; i < grid.ActiveChunkCount; i++)
                 {
                     Vector2Int chunk = grid.GetActiveChunk(i);
@@ -68,6 +80,8 @@ namespace NoitaCA
 
             if (bootstrap.Mode == PixelSimulationMode.ActivePixels)
             {
+                // 活跃像素模式下高亮被唤醒的单格，数量做上限保护。
+                // In active-pixel mode, highlight awakened cells with a count cap.
                 int count = Mathf.Min(MaxActivePixelRects, grid.ActivePixelCount);
                 for (int i = 0; i < count; i++)
                 {
@@ -80,6 +94,8 @@ namespace NoitaCA
 
         private Rect CellRectToGuiRect(int cellX, int cellY, int cellWidth, int cellHeight)
         {
+            // 网格坐标先转世界坐标，再转屏幕坐标，最后翻转成 IMGUI 的左上原点坐标。
+            // Grid coordinates convert to world, then screen, then flip into IMGUI's top-left origin.
             PixelWorldRenderer renderer = bootstrap.Renderer;
             float ppu = Mathf.Max(1, renderer.PixelsPerUnit);
             Vector3 minWorld = renderer.transform.TransformPoint(new Vector3(cellX / ppu, cellY / ppu, 0f));
@@ -96,6 +112,8 @@ namespace NoitaCA
 
         private static void DrawRectOutline(Rect rect, Color color, float thickness)
         {
+            // 用四个细矩形组成边框，避免依赖额外绘图库。
+            // Compose the outline from four thin rectangles without extra drawing libraries.
             DrawRect(new Rect(rect.xMin, rect.yMin, rect.width, thickness), color);
             DrawRect(new Rect(rect.xMin, rect.yMax - thickness, rect.width, thickness), color);
             DrawRect(new Rect(rect.xMin, rect.yMin, thickness, rect.height), color);
@@ -104,6 +122,8 @@ namespace NoitaCA
 
         private static void DrawRect(Rect rect, Color color)
         {
+            // 复用 1x1 白色纹理，通过 GUI.color 控制颜色和透明度。
+            // Reuse a 1x1 white texture and tint it through GUI.color.
             EnsureTexture();
             Color previous = GUI.color;
             GUI.color = color;
@@ -118,6 +138,8 @@ namespace NoitaCA
                 return;
             }
 
+            // 延迟创建白色纹理，只在首次绘制时分配。
+            // Lazily create the white texture only when first drawn.
             whiteTexture = new Texture2D(1, 1, TextureFormat.RGBA32, false);
             whiteTexture.SetPixel(0, 0, Color.white);
             whiteTexture.Apply(false);
