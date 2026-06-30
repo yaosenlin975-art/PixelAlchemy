@@ -407,9 +407,35 @@ MonoBehaviour:
   pressureFlowProbability: 0.9
   pressureFlowMaxDistance: 6
   cameraPadding: 0.5
+  enableAlchemyArtDirection: 1
+  enableProceduralBackdrop: 1
+  enablePostProcessing: 1
+  renderSettings:
+    EnableAlchemyPalette: 1
+    MaterialVariation: 0.42
+    DepthShadow: 0.36
+    EdgeLighting: 0.34
+    GlowBoost: 0.28
+    AmbientVeil: 0.16
   buildDemoTerrain: 1
+  buildDemoPlayer: 1
+  enableDebugPaintingWithPlayer: 0
+  playerSprite: {fileID: -3794225937177000630, guid: 1173e6f1fc567c7499129cf20f02d932, type: 3}
+  playerWidthInCells: 7
+  playerHeightInCells: 14
+  playerVisualHeightInCells: 18
   bottomlessHoleCenterX: -1
   bottomlessHoleWidth: 10
+  enableInfiniteCave: 1
+  infiniteCaveSeed: 1729
+  transitionTriggerRow: 8
+  segmentEntryMarginFromTop: 20
+  plannedSpawnPointsPerSegment: 12
+  enableCameraFollow: 1
+  cameraFollowSmoothTime: 0.22
+  cameraFollowHorizontalDeadZone: 1.25
+  cameraFollowVerticalLookAhead: -0.6
+  cameraFollowOrthographicSize: 5.2
 --- !u!114 &1300000003
 MonoBehaviour:
   m_ObjectHideFlags: 0
