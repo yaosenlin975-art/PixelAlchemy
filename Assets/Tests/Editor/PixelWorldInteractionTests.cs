@@ -158,6 +158,74 @@ public sealed class PixelWorldInteractionTests
         Assert.Greater(CountMaterial(grid, MaterialType.Debris), 0);
     }
 
+    [Test]
+    public void FireAbilityImpactUsesPixelReactions()
+    {
+        PixelGrid grid = new PixelGrid(24, 24);
+        FirePixelAbility ability = ScriptableObject.CreateInstance<FirePixelAbility>();
+        ability.UseRuntimeDefaults();
+
+        grid.SetMaterial(12, 12, MaterialType.Wood);
+        ability.ResolveImpact(new PixelAbilityContext { Grid = grid }, new Vector2Int(12, 12));
+
+        Assert.Greater(CountMaterial(grid, MaterialType.Fire), 0);
+        Assert.Greater(CountMaterial(grid, MaterialType.Smoke), 0);
+        Object.DestroyImmediate(ability);
+    }
+
+    [Test]
+    public void EquipmentControllerEquipsAbilityOnSpellController()
+    {
+        GameObject playerObject = new GameObject("Equipment Test");
+        try
+        {
+            SpellController spellController = playerObject.AddComponent<SpellController>();
+            PixelEquipmentController equipmentController = playerObject.AddComponent<PixelEquipmentController>();
+            FirePixelAbility ability = ScriptableObject.CreateInstance<FirePixelAbility>();
+            ability.UseRuntimeDefaults();
+            PixelEquipmentDefinition equipment = PixelEquipmentDefinition.CreateRuntime("Test Fire Staff", ability);
+
+            equipmentController.Initialize(spellController);
+            Assert.IsTrue(equipmentController.Equip(equipment));
+            Assert.AreEqual(ability, spellController.SelectedAbility);
+
+            Object.DestroyImmediate(equipment);
+            Object.DestroyImmediate(ability);
+        }
+        finally
+        {
+            Object.DestroyImmediate(playerObject);
+        }
+    }
+
+    [Test]
+    public void RuntimeCreatureDefinitionsBuildReadableBodyPlans()
+    {
+        PixelCreatureDefinition crawler = PixelCreatureDefinition.CreateRuntimeCrawler(null);
+        PixelCreatureDefinition jumper = PixelCreatureDefinition.CreateRuntimeJumper(null);
+        try
+        {
+            System.Collections.Generic.List<PixelBodyCell> stillCrawler = new System.Collections.Generic.List<PixelBodyCell>();
+            System.Collections.Generic.List<PixelBodyCell> movingCrawler = new System.Collections.Generic.List<PixelBodyCell>();
+            System.Collections.Generic.List<PixelBodyCell> jumperBody = new System.Collections.Generic.List<PixelBodyCell>();
+
+            crawler.BuildBodyCells(stillCrawler, 0f, false, true);
+            crawler.BuildBodyCells(movingCrawler, Mathf.PI * 0.5f, true, true);
+            jumper.BuildBodyCells(jumperBody, 0f, false, true);
+
+            Assert.Greater(stillCrawler.Count, 12);
+            Assert.Greater(jumperBody.Count, 10);
+            Assert.AreEqual(0, FindLowestY(stillCrawler));
+            Assert.AreEqual(0, FindLowestY(jumperBody));
+            Assert.AreNotEqual(FindLowestXForMaterial(stillCrawler, MaterialType.Sand), FindLowestXForMaterial(movingCrawler, MaterialType.Sand));
+        }
+        finally
+        {
+            Object.DestroyImmediate(crawler);
+            Object.DestroyImmediate(jumper);
+        }
+    }
+
     private static int CountMaterial(PixelGrid grid, MaterialType materialType)
     {
         int count = 0;
@@ -173,5 +241,32 @@ public sealed class PixelWorldInteractionTests
         }
 
         return count;
+    }
+
+    private static int FindLowestXForMaterial(System.Collections.Generic.List<PixelBodyCell> cells, MaterialType materialType)
+    {
+        int x = int.MaxValue;
+        int y = int.MaxValue;
+        for (int i = 0; i < cells.Count; i++)
+        {
+            if (cells[i].Material == materialType && cells[i].Offset.y < y)
+            {
+                x = cells[i].Offset.x;
+                y = cells[i].Offset.y;
+            }
+        }
+
+        return x;
+    }
+
+    private static int FindLowestY(System.Collections.Generic.List<PixelBodyCell> cells)
+    {
+        int y = int.MaxValue;
+        for (int i = 0; i < cells.Count; i++)
+        {
+            y = Mathf.Min(y, cells[i].Offset.y);
+        }
+
+        return y;
     }
 }

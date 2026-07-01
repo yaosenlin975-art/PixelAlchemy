@@ -39,6 +39,11 @@ namespace NoitaCA
         [SerializeField] private int transitionTriggerRow = 8;
         [SerializeField] private int segmentEntryMarginFromTop = 20;
         [SerializeField] private int plannedSpawnPointsPerSegment = 12;
+        [SerializeField] private bool spawnPixelCreaturesAndEquipment = true;
+        [SerializeField] private int guaranteedNearbyMonsters = 0;
+        [SerializeField] private int guaranteedNearbyEquipment = 1;
+        [SerializeField] private PixelCreatureDefinition[] creatureDefinitions;
+        [SerializeField] private PixelEquipmentDefinition[] equipmentDefinitions;
         [SerializeField] private bool enableCameraFollow = true;
         [SerializeField] private float cameraFollowSmoothTime = 0.22f;
         [SerializeField] private float cameraFollowHorizontalDeadZone = 1.25f;
@@ -50,6 +55,7 @@ namespace NoitaCA
         private PixelWorldRenderer worldRenderer;
         private InputController inputController;
         private PlayerController player;
+        private PixelWorldSpawner worldSpawner;
         private Camera targetCamera;
         private VolumeProfile generatedVolumeProfile;
         private readonly List<PixelWorldSpawnPoint> spawnPoints = new List<PixelWorldSpawnPoint>(32);
@@ -57,6 +63,7 @@ namespace NoitaCA
         private float simulationAccumulator;
         private Vector2Int playerSpawnCell;
         private int currentCaveSegment;
+        private int segmentHeight;
         private float segmentWorldStep;
 
         public int CurrentCaveSegment => currentCaveSegment;
@@ -101,7 +108,14 @@ namespace NoitaCA
             }
 
             UpdateInfiniteCaveTransition();
-            worldRenderer.Render();
+            if (enableInfiniteCave && enableCameraFollow)
+            {
+                worldRenderer.RenderVisible(targetCamera, Mathf.Max(8, worldHeight / 12));
+            }
+            else
+            {
+                worldRenderer.Render();
+            }
         }
 
         private void LateUpdate()
@@ -117,25 +131,39 @@ namespace NoitaCA
             }
 
             Vector2Int playerCell = worldRenderer.WorldToCell(player.transform.position);
-            if (playerCell.y <= Mathf.Clamp(transitionTriggerRow, 2, worldHeight - 8))
+            if (playerCell.y < segmentHeight && IsPreviousSegmentFullyOutOfView())
             {
                 AdvanceToNextCaveSegment();
             }
         }
 
+        private bool IsPreviousSegmentFullyOutOfView()
+        {
+            if (targetCamera == null)
+            {
+                return true;
+            }
+
+            Vector3 cameraTop = targetCamera.transform.position + Vector3.up * targetCamera.orthographicSize;
+            Vector2Int topCell = worldRenderer.WorldToCell(cameraTop);
+            return topCell.y < segmentHeight - Mathf.Max(2, transitionTriggerRow);
+        }
+
         private void AdvanceToNextCaveSegment()
         {
             currentCaveSegment++;
-            BuildInfiniteCaveSegment(currentCaveSegment);
+            CopySegment(0, segmentHeight);
+            BuildInfiniteCaveSegment(currentCaveSegment + 1, 0);
+            CarveSegmentConnector(currentCaveSegment, currentCaveSegment + 1);
             ConfigureDisplayTransform();
-            GenerateSpawnPointsForSegment(currentCaveSegment);
+            GenerateSpawnPointsForSegment(currentCaveSegment, GetCurrentSegmentOffset());
+            SpawnCurrentSegmentContent();
             ConfigureProceduralBackdrop();
             ConfigureAlchemyLights();
 
-            Vector2Int entryCell = GetSegmentEntryCell(currentCaveSegment);
-            player.WarpToCell(entryCell, true);
-            grid.MarkActiveArea(entryCell.x, entryCell.y, 12);
-            grid.ActivateAll();
+            Vector2Int currentCell = worldRenderer.WorldToCell(player.transform.position);
+            player.SetRespawnCell(currentCell);
+            grid.MarkActiveArea(currentCell.x, currentCell.y, 16);
         }
 
         private void UpdateCameraFollow()
@@ -162,30 +190,30 @@ namespace NoitaCA
                 Mathf.Max(0.01f, cameraFollowSmoothTime));
         }
 
-        private void BuildInfiniteCaveSegment(int segmentIndex)
+        private void BuildInfiniteCaveSegment(int segmentIndex, int yOffset)
         {
-            ClearWorld(MaterialType.Stone);
-            BuildInfiniteMineralStrata(segmentIndex);
+            ClearSegment(yOffset, MaterialType.Stone);
+            BuildInfiniteMineralStrata(segmentIndex, yOffset);
 
-            Vector2Int entry = GetSegmentEntryCell(segmentIndex);
-            Vector2Int exit = GetSegmentExitCell(segmentIndex);
+            Vector2Int entry = GetSegmentEntryCell(segmentIndex, yOffset);
+            Vector2Int exit = GetSegmentExitCell(segmentIndex, yOffset);
             int tunnelRadius = Mathf.Clamp(worldWidth / 28, 6, 11);
 
-            for (int y = worldHeight - 4; y >= 0; y--)
+            for (int localY = segmentHeight - 4; localY >= 0; localY--)
             {
-                float depthT = 1f - y / (float)Mathf.Max(1, worldHeight - 1);
+                float depthT = 1f - localY / (float)Mathf.Max(1, segmentHeight - 1);
                 float bend = Mathf.Sin(depthT * Mathf.PI * (2.4f + (segmentIndex % 4) * 0.35f) + segmentIndex * 1.17f) * worldWidth * 0.18f;
                 float wobble = Mathf.Sin(depthT * Mathf.PI * 9.5f + infiniteCaveSeed * 0.013f + segmentIndex) * worldWidth * 0.045f;
                 int centerX = Mathf.RoundToInt(Mathf.Lerp(entry.x, exit.x, depthT) + bend + wobble);
                 centerX = Mathf.Clamp(centerX, tunnelRadius + 3, worldWidth - tunnelRadius - 4);
-                int radius = tunnelRadius + Mathf.RoundToInt((Mathf.Sin(y * 0.19f + segmentIndex) * 0.5f + 0.5f) * 3f);
-                grid.PaintCircle(centerX, y, radius, MaterialType.Air);
+                int radius = tunnelRadius + Mathf.RoundToInt((Mathf.Sin(localY * 0.19f + segmentIndex) * 0.5f + 0.5f) * 3f);
+                grid.PaintCircle(centerX, yOffset + localY, radius, MaterialType.Air);
             }
 
             CarveRoom(entry.x, entry.y - 4, 24, 12);
             CarveRoom(exit.x, Mathf.Max(10, exit.y + 7), 20, 11);
-            CarveProceduralSideRooms(segmentIndex);
-            BuildSegmentHazardsAndMaterials(segmentIndex);
+            CarveProceduralSideRooms(segmentIndex, yOffset);
+            BuildSegmentHazardsAndMaterials(segmentIndex, yOffset);
             playerSpawnCell = entry;
         }
 
@@ -200,27 +228,72 @@ namespace NoitaCA
             }
         }
 
-        private Vector2Int GetSegmentEntryCell(int segmentIndex)
+        private void ClearSegment(int yOffset, MaterialType material)
         {
-            int margin = Mathf.Clamp(segmentEntryMarginFromTop, 12, worldHeight - 12);
-            int x = Mathf.Clamp(Mathf.RoundToInt(worldWidth * (0.36f + Hash01(segmentIndex, 11) * 0.28f)), 16, worldWidth - 17);
-            return new Vector2Int(x, worldHeight - margin);
-        }
-
-        private Vector2Int GetSegmentExitCell(int segmentIndex)
-        {
-            int x = Mathf.Clamp(Mathf.RoundToInt(worldWidth * (0.32f + Hash01(segmentIndex, 47) * 0.36f)), 16, worldWidth - 17);
-            return new Vector2Int(x, 4);
-        }
-
-        private void BuildInfiniteMineralStrata(int segmentIndex)
-        {
-            for (int y = 0; y < worldHeight; y++)
+            for (int y = yOffset; y < yOffset + segmentHeight && y < worldHeight; y++)
             {
                 for (int x = 0; x < worldWidth; x++)
                 {
-                    float vein = Mathf.Sin((x + segmentIndex * 31) * 0.055f + y * 0.19f)
-                        + Mathf.Sin(x * 0.17f - (y + segmentIndex * 13) * 0.073f) * 0.55f;
+                    grid.SetMaterial(x, y, material);
+                }
+            }
+        }
+
+        private void CopySegment(int sourceYOffset, int destinationYOffset)
+        {
+            for (int y = 0; y < segmentHeight; y++)
+            {
+                int sourceY = sourceYOffset + y;
+                int destinationY = destinationYOffset + y;
+                if (sourceY < 0 || sourceY >= worldHeight || destinationY < 0 || destinationY >= worldHeight)
+                {
+                    continue;
+                }
+
+                for (int x = 0; x < worldWidth; x++)
+                {
+                    grid.SetCell(x, destinationY, grid.GetCell(x, sourceY));
+                    grid.MarkChanged(x, destinationY);
+                }
+            }
+        }
+
+        private void CarveSegmentConnector(int upperSegmentIndex, int lowerSegmentIndex)
+        {
+            Vector2Int upperExit = GetSegmentExitCell(upperSegmentIndex, GetCurrentSegmentOffset());
+            Vector2Int lowerEntry = GetSegmentEntryCell(lowerSegmentIndex, 0);
+            CarveSlopeTunnel(upperExit.x, upperExit.y, lowerEntry.x, lowerEntry.y, Mathf.Clamp(worldWidth / 30, 5, 9));
+            CarveRoom(upperExit.x, upperExit.y + 4, 16, 9);
+            CarveRoom(lowerEntry.x, lowerEntry.y - 4, 18, 10);
+        }
+
+        private int GetCurrentSegmentOffset()
+        {
+            return enableInfiniteCave ? segmentHeight : 0;
+        }
+
+        private Vector2Int GetSegmentEntryCell(int segmentIndex, int yOffset)
+        {
+            int margin = Mathf.Clamp(segmentEntryMarginFromTop, 12, segmentHeight - 12);
+            int x = Mathf.Clamp(Mathf.RoundToInt(worldWidth * (0.36f + Hash01(segmentIndex, 11) * 0.28f)), 16, worldWidth - 17);
+            return new Vector2Int(x, yOffset + segmentHeight - margin);
+        }
+
+        private Vector2Int GetSegmentExitCell(int segmentIndex, int yOffset)
+        {
+            int x = Mathf.Clamp(Mathf.RoundToInt(worldWidth * (0.32f + Hash01(segmentIndex, 47) * 0.36f)), 16, worldWidth - 17);
+            return new Vector2Int(x, yOffset + 4);
+        }
+
+        private void BuildInfiniteMineralStrata(int segmentIndex, int yOffset)
+        {
+            for (int localY = 0; localY < segmentHeight; localY++)
+            {
+                int y = yOffset + localY;
+                for (int x = 0; x < worldWidth; x++)
+                {
+                    float vein = Mathf.Sin((x + segmentIndex * 31) * 0.055f + localY * 0.19f)
+                        + Mathf.Sin(x * 0.17f - (localY + segmentIndex * 13) * 0.073f) * 0.55f;
                     if (vein > 1.18f)
                     {
                         grid.SetMaterial(x, y, MaterialType.Debris);
@@ -237,46 +310,46 @@ namespace NoitaCA
             }
         }
 
-        private void CarveProceduralSideRooms(int segmentIndex)
+        private void CarveProceduralSideRooms(int segmentIndex, int yOffset)
         {
             int roomCount = 4 + segmentIndex % 3;
             for (int i = 0; i < roomCount; i++)
             {
                 float t = (i + 1f) / (roomCount + 1f);
-                int centerY = Mathf.RoundToInt(Mathf.Lerp(worldHeight - 30, 28, t));
+                int centerY = yOffset + Mathf.RoundToInt(Mathf.Lerp(segmentHeight - 30, 28, t));
                 int centerX = Mathf.RoundToInt(Mathf.Lerp(worldWidth * 0.22f, worldWidth * 0.78f, Hash01(segmentIndex, 100 + i)));
                 int radiusX = Mathf.RoundToInt(Mathf.Lerp(15f, 34f, Hash01(segmentIndex, 210 + i)));
                 int radiusY = Mathf.RoundToInt(Mathf.Lerp(8f, 18f, Hash01(segmentIndex, 320 + i)));
                 CarveRoom(centerX, centerY, radiusX, radiusY);
                 if ((i + segmentIndex) % 2 == 0)
                 {
-                    CarveSlopeTunnel(centerX, centerY, worldWidth / 2, Mathf.Clamp(centerY - 10, 12, worldHeight - 16), 4);
+                    CarveSlopeTunnel(centerX, centerY, worldWidth / 2, yOffset + Mathf.Clamp(centerY - yOffset - 10, 12, segmentHeight - 16), 4);
                 }
             }
         }
 
-        private void BuildSegmentHazardsAndMaterials(int segmentIndex)
+        private void BuildSegmentHazardsAndMaterials(int segmentIndex, int yOffset)
         {
             int waterX = Mathf.RoundToInt(Mathf.Lerp(worldWidth * 0.2f, worldWidth * 0.44f, Hash01(segmentIndex, 501)));
-            int waterY = Mathf.RoundToInt(Mathf.Lerp(worldHeight * 0.18f, worldHeight * 0.48f, Hash01(segmentIndex, 502)));
+            int waterY = yOffset + Mathf.RoundToInt(Mathf.Lerp(segmentHeight * 0.18f, segmentHeight * 0.48f, Hash01(segmentIndex, 502)));
             FillEllipse(waterX, waterY, 14, 5, MaterialType.Water, true);
 
             if ((segmentIndex & 1) == 0)
             {
                 int poisonX = Mathf.RoundToInt(Mathf.Lerp(worldWidth * 0.56f, worldWidth * 0.82f, Hash01(segmentIndex, 601)));
-                int poisonY = Mathf.RoundToInt(Mathf.Lerp(worldHeight * 0.22f, worldHeight * 0.54f, Hash01(segmentIndex, 602)));
+                int poisonY = yOffset + Mathf.RoundToInt(Mathf.Lerp(segmentHeight * 0.22f, segmentHeight * 0.54f, Hash01(segmentIndex, 602)));
                 FillEllipse(poisonX, poisonY, 13, 5, MaterialType.Poison, true);
             }
 
             if (segmentIndex % 3 == 0)
             {
                 int lavaX = Mathf.RoundToInt(Mathf.Lerp(worldWidth * 0.58f, worldWidth * 0.86f, Hash01(segmentIndex, 701)));
-                int lavaY = Mathf.RoundToInt(Mathf.Lerp(worldHeight * 0.11f, worldHeight * 0.28f, Hash01(segmentIndex, 702)));
+                int lavaY = yOffset + Mathf.RoundToInt(Mathf.Lerp(segmentHeight * 0.11f, segmentHeight * 0.28f, Hash01(segmentIndex, 702)));
                 FillEllipse(lavaX, lavaY, 15, 6, MaterialType.Lava, true);
             }
 
             int ruinX = Mathf.RoundToInt(Mathf.Lerp(worldWidth * 0.28f, worldWidth * 0.68f, Hash01(segmentIndex, 801)));
-            int ruinY = Mathf.RoundToInt(Mathf.Lerp(worldHeight * 0.32f, worldHeight * 0.68f, Hash01(segmentIndex, 802)));
+            int ruinY = yOffset + Mathf.RoundToInt(Mathf.Lerp(segmentHeight * 0.32f, segmentHeight * 0.68f, Hash01(segmentIndex, 802)));
             BuildWoodRect(ruinX - 14, ruinY, 28, 2);
             BuildWoodRect(ruinX - 12, ruinY - 10, 3, 12);
             BuildWoodRect(ruinX + 10, ruinY - 8, 3, 10);
@@ -286,29 +359,30 @@ namespace NoitaCA
             }
         }
 
-        private void GenerateSpawnPointsForSegment(int segmentIndex)
+        private void GenerateSpawnPointsForSegment(int segmentIndex, int yOffset)
         {
             spawnPoints.Clear();
-            int targetCount = Mathf.Clamp(plannedSpawnPointsPerSegment, 0, 64);
-            int attempts = Mathf.Max(80, targetCount * 24);
+            AddStandableMonsterSpawnPoints(segmentIndex, yOffset);
 
-            for (int i = 0; i < attempts && spawnPoints.Count < targetCount; i++)
+            int targetUtilityCount = Mathf.Clamp(plannedSpawnPointsPerSegment, 0, 64);
+            int attempts = Mathf.Max(160, targetUtilityCount * 40);
+            int utilityCount = 0;
+
+            for (int i = 0; i < attempts && utilityCount < targetUtilityCount; i++)
             {
                 int x = 8 + Mathf.FloorToInt(Hash01(segmentIndex, 900 + i * 2) * Mathf.Max(1, worldWidth - 16));
-                int y = 12 + Mathf.FloorToInt(Hash01(segmentIndex, 901 + i * 2) * Mathf.Max(1, worldHeight - 30));
+                int y = yOffset + 12 + Mathf.FloorToInt(Hash01(segmentIndex, 901 + i * 2) * Mathf.Max(1, segmentHeight - 30));
                 if (!IsSpawnCandidate(x, y))
                 {
                     continue;
                 }
 
                 float roll = Hash01(segmentIndex, 1000 + i);
-                PixelWorldSpawnCategory category = roll < 0.52f
-                    ? PixelWorldSpawnCategory.Monster
-                    : roll < 0.82f
-                        ? PixelWorldSpawnCategory.Item
-                        : roll < 0.93f
-                            ? PixelWorldSpawnCategory.Treasure
-                            : PixelWorldSpawnCategory.Ambient;
+                PixelWorldSpawnCategory category = roll < 0.62f
+                    ? PixelWorldSpawnCategory.Item
+                    : roll < 0.84f
+                        ? PixelWorldSpawnCategory.Treasure
+                        : PixelWorldSpawnCategory.Ambient;
                 Vector2Int cell = new Vector2Int(x, y);
                 spawnPoints.Add(new PixelWorldSpawnPoint(
                     category,
@@ -316,6 +390,31 @@ namespace NoitaCA
                     worldRenderer != null ? worldRenderer.CellToWorldCenter(x, y) : Vector3.zero,
                     segmentIndex,
                     Mathf.Lerp(0.35f, 1f, Hash01(segmentIndex, 1100 + i))));
+                utilityCount++;
+            }
+        }
+
+        private void AddStandableMonsterSpawnPoints(int segmentIndex, int yOffset)
+        {
+            int minY = Mathf.Max(1, yOffset);
+            int maxY = Mathf.Min(grid.Height - 1, yOffset + segmentHeight - 1);
+            for (int y = minY; y <= maxY; y++)
+            {
+                for (int x = 0; x < worldWidth; x++)
+                {
+                    if (!IsSpawnCandidate(x, y))
+                    {
+                        continue;
+                    }
+
+                    Vector2Int cell = new Vector2Int(x, y);
+                    spawnPoints.Add(new PixelWorldSpawnPoint(
+                        PixelWorldSpawnCategory.Monster,
+                        cell,
+                        worldRenderer != null ? worldRenderer.CellToWorldCenter(x, y) : Vector3.zero,
+                        segmentIndex,
+                        Mathf.Lerp(0.35f, 1f, Hash01(segmentIndex, 1300 + x * 17 + y))));
+                }
             }
         }
 
@@ -326,28 +425,52 @@ namespace NoitaCA
                 return false;
             }
 
-            for (int oy = 0; oy <= 3; oy++)
+            if (!grid.InBounds(x, y - 1) || !grid.IsSolid(x, y - 1))
             {
-                if (!grid.InBounds(x, y + oy) || !MaterialDatabase.Get(grid.GetMaterial(x, y + oy)).IsAir)
+                return false;
+            }
+
+            int halfWidth = Mathf.Max(1, playerWidthInCells / 2);
+            int clearHeight = Mathf.Max(1, playerHeightInCells);
+            for (int ox = -halfWidth; ox <= halfWidth; ox++)
+            {
+                for (int oy = 0; oy < clearHeight; oy++)
                 {
-                    return false;
+                    if (!grid.InBounds(x + ox, y + oy) || !MaterialDatabase.Get(grid.GetMaterial(x + ox, y + oy)).IsAir)
+                    {
+                        return false;
+                    }
                 }
             }
 
-            return grid.InBounds(x, y - 1) && grid.IsSolid(x, y - 1);
+            return true;
         }
 
         private void BuildWorld()
         {
-            grid = new PixelGrid(worldWidth, worldHeight);
+            segmentHeight = Mathf.Max(32, worldHeight);
+            int gridHeight = enableInfiniteCave ? segmentHeight * 2 : segmentHeight;
+            grid = new PixelGrid(worldWidth, gridHeight);
             worldWidth = grid.Width;
             worldHeight = grid.Height;
-            segmentWorldStep = worldHeight / (float)Mathf.Max(1, pixelsPerUnit);
+            segmentWorldStep = segmentHeight / (float)Mathf.Max(1, pixelsPerUnit);
             currentCaveSegment = 0;
             spawnPoints.Clear();
             simulation = new PixelSimulation();
+            if (enableInfiniteCave)
+            {
+                simulation.Mode = PixelSimulationMode.ChunkBased;
+            }
 
-            if (buildDemoTerrain)
+            if (enableInfiniteCave)
+            {
+                BuildInfiniteCaveSegment(currentCaveSegment, GetCurrentSegmentOffset());
+                BuildInfiniteCaveSegment(currentCaveSegment + 1, 0);
+                CarveSegmentConnector(currentCaveSegment, currentCaveSegment + 1);
+                playerSpawnCell = GetSegmentEntryCell(currentCaveSegment, GetCurrentSegmentOffset());
+                grid.ActivateAll();
+            }
+            else if (buildDemoTerrain)
             {
                 BuildDemoTerrain();
             }
@@ -360,13 +483,14 @@ namespace NoitaCA
             targetCamera = GetOrCreateCamera();
             worldRenderer = GetOrCreateRenderer();
             inputController = GetOrCreateInputController();
+            worldSpawner = GetOrCreateSpawner();
 
             ConfigureDisplayTransform();
             PixelWorldRenderSettings activeRenderSettings = enableAlchemyArtDirection
                 ? renderSettings ?? PixelWorldRenderSettings.CreateAlchemyDefault()
                 : PixelWorldRenderSettings.CreateClassicDefault();
             worldRenderer.Initialize(grid, pixelsPerUnit, activeRenderSettings);
-            GenerateSpawnPointsForSegment(currentCaveSegment);
+            GenerateSpawnPointsForSegment(currentCaveSegment, GetCurrentSegmentOffset());
             ConfigureCamera();
             ConfigureArtPresentation();
             inputController.Initialize(grid, worldRenderer, targetCamera);
@@ -378,7 +502,24 @@ namespace NoitaCA
                 player.Initialize(grid, worldRenderer, targetCamera, playerSpawnCell, playerSprite);
             }
 
+            if (spawnPixelCreaturesAndEquipment && worldSpawner != null)
+            {
+                worldSpawner.Initialize(grid, worldRenderer, player, creatureDefinitions, equipmentDefinitions);
+                SpawnCurrentSegmentContent();
+                worldSpawner.SpawnIntroContent(playerSpawnCell, guaranteedNearbyMonsters, guaranteedNearbyEquipment);
+            }
+
             worldRenderer.Render();
+        }
+
+        private void SpawnCurrentSegmentContent()
+        {
+            if (!spawnPixelCreaturesAndEquipment || worldSpawner == null)
+            {
+                return;
+            }
+
+            worldSpawner.SpawnFromPoints(spawnPoints, currentCaveSegment);
         }
 
         private PixelWorldRenderer GetOrCreateRenderer()
@@ -412,6 +553,22 @@ namespace NoitaCA
             }
 
             return controller;
+        }
+
+        private PixelWorldSpawner GetOrCreateSpawner()
+        {
+            Transform existingSpawner = transform.Find("Pixel World Spawner");
+            GameObject spawnerObject = existingSpawner == null
+                ? new GameObject("Pixel World Spawner")
+                : existingSpawner.gameObject;
+            spawnerObject.transform.SetParent(transform, false);
+
+            if (!spawnerObject.TryGetComponent(out PixelWorldSpawner spawner))
+            {
+                spawner = spawnerObject.AddComponent<PixelWorldSpawner>();
+            }
+
+            return spawner;
         }
 
         private PlayerController GetOrCreatePlayer()
@@ -464,7 +621,8 @@ namespace NoitaCA
         private void ConfigureDisplayTransform()
         {
             Vector2 worldSize = new Vector2(worldWidth / (float)pixelsPerUnit, worldHeight / (float)pixelsPerUnit);
-            worldRenderer.transform.position = new Vector3(-worldSize.x * 0.5f, -worldSize.y * 0.5f - currentCaveSegment * segmentWorldStep, 0f);
+            float infiniteYOffset = enableInfiniteCave ? -(currentCaveSegment + 1) * segmentWorldStep : -worldSize.y * 0.5f;
+            worldRenderer.transform.position = new Vector3(-worldSize.x * 0.5f, infiniteYOffset, 0f);
             worldRenderer.transform.rotation = Quaternion.identity;
             worldRenderer.transform.localScale = Vector3.one;
         }
@@ -472,9 +630,10 @@ namespace NoitaCA
         private void ConfigureCamera()
         {
             Vector2 worldSize = new Vector2(worldWidth / (float)pixelsPerUnit, worldHeight / (float)pixelsPerUnit);
+            float segmentWorldHeight = segmentHeight / (float)Mathf.Max(1, pixelsPerUnit);
             targetCamera.orthographic = true;
             targetCamera.orthographicSize = enableInfiniteCave && enableCameraFollow
-                ? Mathf.Clamp(cameraFollowOrthographicSize, 2.2f, worldSize.y * 0.5f + Mathf.Max(0f, cameraPadding))
+                ? Mathf.Clamp(cameraFollowOrthographicSize, 2.2f, segmentWorldHeight * 0.5f + Mathf.Max(0f, cameraPadding))
                 : worldSize.y * 0.5f + Mathf.Max(0f, cameraPadding);
             targetCamera.transform.position = new Vector3(0f, 0f, -10f);
             targetCamera.transform.rotation = Quaternion.identity;

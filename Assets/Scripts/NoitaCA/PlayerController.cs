@@ -48,6 +48,7 @@ namespace NoitaCA
         private Camera targetCamera;
         private SpriteRenderer spriteRenderer;
         private SpellController spellController;
+        private PixelEquipmentController equipmentController;
         private readonly List<Sprite> generatedSprites = new List<Sprite>(32);
         private readonly List<Texture2D> generatedTextures = new List<Texture2D>(32);
         private Sprite[] idleFrames;
@@ -66,6 +67,8 @@ namespace NoitaCA
         private PlayerAnimationState animationState = PlayerAnimationState.Idle;
         private float animationTimer;
         private float attackTimer;
+        private float hitFlashTimer;
+        private const float HitFlashDuration = 0.42f;
         private int animationFrameIndex;
         private int facingDirection = 1;
         private float visualScale = 1f;
@@ -76,6 +79,21 @@ namespace NoitaCA
         public PixelGrid Grid => grid;
         public PixelWorldRenderer WorldRenderer => worldRenderer;
         public Camera TargetCamera => targetCamera;
+        public int WidthInCells => widthInCells;
+        public int HeightInCells => heightInCells;
+
+        public RectInt GetCoveredCellsAt(Vector3 worldPosition)
+        {
+            float ppu = Mathf.Max(1, worldRenderer.PixelsPerUnit);
+            Vector2 halfSize = new Vector2(widthInCells / ppu, heightInCells / ppu) * 0.5f;
+            Vector2 min = (Vector2)worldPosition - halfSize;
+            Vector2 max = (Vector2)worldPosition + halfSize;
+            Vector2Int minCell = worldRenderer.WorldToCell(min);
+            Vector2Int maxCell = worldRenderer.WorldToCell(max);
+            return new RectInt(minCell.x, minCell.y, maxCell.x - minCell.x, maxCell.y - minCell.y);
+        }
+
+        public RectInt CurrentCoveredCells => GetCoveredCellsAt(transform.position);
 
         public void ConfigureSize(int collisionWidthInCells, int collisionHeightInCells, float spriteHeightInCells)
         {
@@ -119,6 +137,13 @@ namespace NoitaCA
             }
 
             spellController.Initialize(grid, worldRenderer, targetCamera, transform);
+
+            if (!TryGetComponent(out equipmentController))
+            {
+                equipmentController = gameObject.AddComponent<PixelEquipmentController>();
+            }
+
+            equipmentController.Initialize(spellController);
         }
 
         public void Initialize(PixelGrid pixelGrid, PixelWorldRenderer renderer, Vector2Int playerSpawnCell)
@@ -156,6 +181,7 @@ namespace NoitaCA
             MoveWithGridCollision(velocity * Time.deltaTime);
             RespawnIfOutOfWorld();
             UpdateProceduralAnimation();
+            UpdateHitFlash();
         }
 
         public void Respawn()
@@ -165,6 +191,8 @@ namespace NoitaCA
             velocity = Vector2.zero;
             grounded = false;
             attackTimer = 0f;
+            hitFlashTimer = 0f;
+            SetSpriteColor(Color.white);
             transform.position = spawnWorldPosition;
         }
 
@@ -184,6 +212,82 @@ namespace NoitaCA
             }
         }
 
+        public void SetRespawnCell(Vector2Int targetCell)
+        {
+            spawnCell = targetCell;
+            spawnWorldPosition = worldRenderer.CellToWorldCenter(targetCell.x, targetCell.y);
+        }
+
+        public void ApplyDamage(float damage, bool respectInvulnerability)
+        {
+            ApplyDamage(damage, respectInvulnerability, false);
+        }
+
+        public void ApplyDamage(float damage, bool respectInvulnerability, bool showHitFeedback)
+        {
+            if (damage <= 0f || IsDead || (respectInvulnerability && invulnerableTimer > 0f))
+            {
+                return;
+            }
+
+            float appliedDamage = Mathf.Min(health, damage);
+            health -= damage;
+            if (showHitFeedback)
+            {
+                TriggerHitFeedback(appliedDamage);
+            }
+
+            if (health <= 0f)
+            {
+                Respawn();
+            }
+        }
+
+        private void TriggerHitFeedback(float damage)
+        {
+            hitFlashTimer = HitFlashDuration;
+            SpawnDamageNumber(damage);
+        }
+
+        private void UpdateHitFlash()
+        {
+            if (spriteRenderer == null)
+            {
+                return;
+            }
+
+            if (hitFlashTimer <= 0f)
+            {
+                SetSpriteColor(Color.white);
+                return;
+            }
+
+            hitFlashTimer = Mathf.Max(0f, hitFlashTimer - Time.deltaTime);
+            float phase = Mathf.PingPong((HitFlashDuration - hitFlashTimer) * 18f, 1f);
+            Color flashColor = Color.Lerp(new Color(1f, 0.28f, 0.22f, 1f), Color.white, phase);
+            SetSpriteColor(flashColor);
+        }
+
+        private void SpawnDamageNumber(float damage)
+        {
+            if (worldRenderer == null)
+            {
+                return;
+            }
+
+            float ppu = Mathf.Max(1, worldRenderer.PixelsPerUnit);
+            Vector3 position = transform.position + Vector3.up * (heightInCells / ppu * 0.72f + 0.18f);
+            PlayerDamageNumberFeedback.Spawn(position, transform.parent, Mathf.Max(1, worldRenderer.PixelsPerUnit), damage);
+        }
+
+        private void SetSpriteColor(Color color)
+        {
+            if (spriteRenderer != null)
+            {
+                spriteRenderer.color = color;
+            }
+        }
+
         private void ApplyMaterialFeedback()
         {
             RectInt bounds = GetCoveredCells(transform.position);
@@ -199,20 +303,20 @@ namespace NoitaCA
                         continue;
                     }
 
-                    MaterialDefinition definition = MaterialDatabase.Get(grid.GetMaterial(x, y));
+                    Pixel pixel = grid.GetCell(x, y);
+                    MaterialDefinition definition = MaterialDatabase.Get(pixel.MaterialType);
                     strongestSlow = Mathf.Min(strongestSlow, definition.PlayerSpeedMultiplier);
-                    damagePerSecond = Mathf.Max(damagePerSecond, definition.PlayerDamagePerSecond);
+                    if (!pixel.IsPlayerSpell)
+                    {
+                        damagePerSecond = Mathf.Max(damagePerSecond, definition.PlayerDamagePerSecond);
+                    }
                 }
             }
 
             materialSpeedMultiplier = strongestSlow;
             if (damagePerSecond > 0f && invulnerableTimer <= 0f)
             {
-                health -= damagePerSecond * Time.deltaTime;
-                if (health <= 0f)
-                {
-                    Respawn();
-                }
+                ApplyDamage(damagePerSecond * Time.deltaTime, false);
             }
         }
 

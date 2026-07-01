@@ -23,6 +23,7 @@ namespace NoitaCA
         private int[,] chunkSleepFrames;
         private readonly List<Vector2Int> activeChunkList = new List<Vector2Int>(64);
         private readonly List<Vector2Int> nextActiveChunkList = new List<Vector2Int>(64);
+        private int playerSpellWriteDepth;
 
         public int Width { get; }
         public int Height { get; }
@@ -83,6 +84,7 @@ namespace NoitaCA
 
             // SetCell 只写入数据；是否唤醒周围区域由调用者决定。
             // SetCell only writes data; callers decide whether nearby regions should wake up.
+            ApplyPlayerSpellFlag(ref pixel);
             cells[x, y] = pixel;
         }
 
@@ -115,8 +117,46 @@ namespace NoitaCA
 
             // 材料替换是用户绘制和场景生成的主要入口，必须标记变化区域。
             // Material replacement is the main entry for painting and world generation, so it marks changed regions.
-            cells[x, y] = Pixel.FromMaterial(materialType);
+            Pixel pixel = Pixel.FromMaterial(materialType);
+            ApplyPlayerSpellFlag(ref pixel);
+            cells[x, y] = pixel;
             MarkChanged(x, y);
+        }
+
+        public void SetMaterialSilent(int x, int y, MaterialType materialType)
+        {
+            if (!InBounds(x, y))
+            {
+                return;
+            }
+
+            Pixel pixel = Pixel.FromMaterial(materialType);
+            ApplyPlayerSpellFlag(ref pixel);
+            cells[x, y] = pixel;
+            MarkChangedForRender(x, y);
+        }
+
+        public void SetCreatureBodyMaterialSilent(int x, int y, MaterialType materialType)
+        {
+            if (!InBounds(x, y))
+            {
+                return;
+            }
+
+            Pixel pixel = Pixel.FromMaterial(materialType);
+            pixel.IsCreatureBody = true;
+            cells[x, y] = pixel;
+            MarkChangedForRender(x, y);
+        }
+
+        public void BeginPlayerSpellWrites()
+        {
+            playerSpellWriteDepth++;
+        }
+
+        public void EndPlayerSpellWrites()
+        {
+            playerSpellWriteDepth = Mathf.Max(0, playerSpellWriteDepth - 1);
         }
 
         public void SwapCells(int firstX, int firstY, int secondX, int secondY)
@@ -233,6 +273,21 @@ namespace NoitaCA
             // Any pixel change wakes nearby pixels and neighboring chunks so local propagation continues.
             MarkActiveArea(x, y, 1);
             MarkChunkAndNeighborsActive(x, y);
+        }
+
+        private void MarkChangedForRender(int x, int y)
+        {
+            if (!InBounds(x, y))
+            {
+                return;
+            }
+
+            int chunkX = x / ChunkSize;
+            int chunkY = y / ChunkSize;
+            if (chunkX >= 0 && chunkX < ChunkColumns && chunkY >= 0 && chunkY < ChunkRows)
+            {
+                changedChunks[chunkX, chunkY] = true;
+            }
         }
 
         public void MarkActiveArea(int centerX, int centerY, int radius)
@@ -515,6 +570,11 @@ namespace NoitaCA
 
         private bool CanSpawnInto(int x, int y, MaterialType materialType)
         {
+            if (cells[x, y].IsCreatureBody)
+            {
+                return false;
+            }
+
             MaterialDefinition target = MaterialDatabase.Get(cells[x, y].MaterialType);
             if (target.IsAir || target.CanBeDisplaced)
             {
@@ -522,6 +582,16 @@ namespace NoitaCA
             }
 
             return materialType == MaterialType.Fire && cells[x, y].MaterialType == MaterialType.Wood;
+        }
+
+        private void ApplyPlayerSpellFlag(ref Pixel pixel)
+        {
+            if (playerSpellWriteDepth <= 0 || MaterialDatabase.Get(pixel.MaterialType).IsAir)
+            {
+                return;
+            }
+
+            pixel.IsPlayerSpell = true;
         }
 
         private void Clear()

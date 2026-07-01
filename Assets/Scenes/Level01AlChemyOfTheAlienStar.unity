@@ -415,6 +415,11 @@ MonoBehaviour:
   transitionTriggerRow: 8
   segmentEntryMarginFromTop: 20
   plannedSpawnPointsPerSegment: 12
+  spawnPixelCreaturesAndEquipment: 1
+  guaranteedNearbyMonsters: 3
+  guaranteedNearbyEquipment: 1
+  creatureDefinitions: []
+  equipmentDefinitions: []
   enableCameraFollow: 1
   cameraFollowSmoothTime: 0.22
   cameraFollowHorizontalDeadZone: 1.25

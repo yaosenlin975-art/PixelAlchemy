@@ -11,6 +11,7 @@ namespace NoitaCA
         private Texture2D texture;
         private Sprite sprite;
         private Color32[] pixels;
+        private Color32[] visiblePixels;
         private PixelGrid grid;
         private PixelWorldRenderSettings renderSettings = PixelWorldRenderSettings.CreateAlchemyDefault();
 
@@ -42,6 +43,7 @@ namespace NoitaCA
 
             spriteRenderer = GetComponent<SpriteRenderer>();
             pixels = new Color32[grid.Width * grid.Height];
+            visiblePixels = new Color32[grid.Width * grid.Height];
 
             if (sprite != null)
             {
@@ -77,7 +79,41 @@ namespace NoitaCA
                 return;
             }
 
-            for (int y = 0; y < grid.Height; y++)
+            RenderRows(0, grid.Height - 1);
+        }
+
+        public void RenderVisible(Camera targetCamera, int verticalPaddingCells)
+        {
+            if (grid == null || texture == null || targetCamera == null || !targetCamera.orthographic)
+            {
+                Render();
+                return;
+            }
+
+            float halfHeight = targetCamera.orthographicSize;
+            float halfWidth = halfHeight * targetCamera.aspect;
+            Vector3 cameraPosition = targetCamera.transform.position;
+            Vector2Int minCell = WorldToCell(new Vector3(cameraPosition.x - halfWidth, cameraPosition.y - halfHeight, 0f));
+            Vector2Int maxCell = WorldToCell(new Vector3(cameraPosition.x + halfWidth, cameraPosition.y + halfHeight, 0f));
+            int padding = Mathf.Max(0, verticalPaddingCells);
+            RenderRows(minCell.y - padding, maxCell.y + padding);
+        }
+
+        private void RenderRows(int minY, int maxY)
+        {
+            if (grid == null || texture == null)
+            {
+                return;
+            }
+
+            int startY = Mathf.Clamp(minY, 0, grid.Height - 1);
+            int endY = Mathf.Clamp(maxY, 0, grid.Height - 1);
+            if (endY < startY)
+            {
+                return;
+            }
+
+            for (int y = startY; y <= endY; y++)
             {
                 for (int x = 0; x < grid.Width; x++)
                 {
@@ -92,7 +128,15 @@ namespace NoitaCA
                 }
             }
 
-            texture.SetPixels32(pixels);
+            int rowCount = endY - startY + 1;
+            int visibleLength = grid.Width * rowCount;
+            if (visiblePixels == null || visiblePixels.Length != visibleLength)
+            {
+                visiblePixels = new Color32[visibleLength];
+            }
+
+            System.Array.Copy(pixels, startY * grid.Width, visiblePixels, 0, visibleLength);
+            texture.SetPixels32(0, startY, grid.Width, rowCount, visiblePixels, 0);
             texture.Apply(false);
         }
 

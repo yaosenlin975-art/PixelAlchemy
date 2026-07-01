@@ -22,43 +22,39 @@ namespace NoitaCA
         [SerializeField] private int maxDigRangeCells = 72;
 
         [Header("Spells")]
-        [SerializeField] private float projectileSpeed = 9f;
-        [SerializeField] private float projectileLifetime = 1.8f;
-        [SerializeField] private float normalCooldown = 0.22f;
-        [SerializeField] private float specialCooldown = 0.5f;
-        [SerializeField] private float ultimateCooldown = 1.1f;
         [SerializeField] private int maxSpellRangeCells = 92;
+        [SerializeField] private PixelAbility[] startingAbilities;
 
-        private sealed class Projectile
-        {
-            public SpellElement Element;
-            public Vector3 Position;
-            public Vector3 Velocity;
-            public float Gravity;
-            public float TimeRemaining;
-            public float TrailTimer;
-            public GameObject Visual;
-        }
-
-        private readonly List<Projectile> projectiles = new List<Projectile>(32);
+        private readonly List<PixelProjectile> projectiles = new List<PixelProjectile>(32);
+        private readonly List<PixelAbility> abilities = new List<PixelAbility>(8);
+        private readonly Dictionary<PixelAbility, Sprite> projectileSprites = new Dictionary<PixelAbility, Sprite>();
+        private readonly List<Texture2D> generatedTextures = new List<Texture2D>(8);
         private PixelGrid grid;
         private PixelWorldRenderer worldRenderer;
         private Camera targetCamera;
         private Transform caster;
         private PlayerController casterPlayer;
-        private SpellElement selectedElement;
+        private int selectedAbilityIndex;
         private float digTimer;
         private float normalTimer;
         private float specialTimer;
         private float ultimateTimer;
-        private Sprite fireSprite;
-        private Sprite frostSprite;
-        private Sprite poisonSprite;
-        private Texture2D fireTexture;
-        private Texture2D frostTexture;
-        private Texture2D poisonTexture;
 
-        public SpellElement SelectedElement => selectedElement;
+        public PixelAbility SelectedAbility => abilities.Count > 0 ? abilities[Mathf.Clamp(selectedAbilityIndex, 0, abilities.Count - 1)] : null;
+
+        public SpellElement SelectedElement
+        {
+            get
+            {
+                PixelAbility selected = SelectedAbility;
+                if (selected is FrostPixelAbility)
+                {
+                    return SpellElement.Frost;
+                }
+
+                return selected is PoisonPixelAbility ? SpellElement.Poison : SpellElement.Fire;
+            }
+        }
 
         public void Initialize(PixelGrid pixelGrid, PixelWorldRenderer renderer, Camera cameraToUse, Transform casterTransform)
         {
@@ -67,7 +63,26 @@ namespace NoitaCA
             targetCamera = cameraToUse;
             caster = casterTransform;
             casterPlayer = casterTransform != null ? casterTransform.GetComponent<PlayerController>() : null;
-            BuildProjectileSprites();
+            BuildAbilityList();
+        }
+
+        public bool EquipAbility(PixelAbility ability)
+        {
+            if (ability == null)
+            {
+                return false;
+            }
+
+            int index = abilities.IndexOf(ability);
+            if (index < 0)
+            {
+                abilities.Add(ability);
+                index = abilities.Count - 1;
+            }
+
+            selectedAbilityIndex = index;
+            EnsureProjectileSprite(ability);
+            return true;
         }
 
         private void Update()
@@ -88,9 +103,9 @@ namespace NoitaCA
 
         private void HandleInput()
         {
-            if (WasCyclePressed())
+            if (WasCyclePressed() && abilities.Count > 0)
             {
-                selectedElement = (SpellElement)(((int)selectedElement + 1) % 3);
+                selectedAbilityIndex = (selectedAbilityIndex + 1) % abilities.Count;
             }
 
             if (IsSecondaryButtonPressed() && digTimer <= 0f)
@@ -99,29 +114,42 @@ namespace NoitaCA
                 digTimer = digCooldown;
             }
 
-            if (WasPrimaryButtonPressed())
+            PixelAbility ability = SelectedAbility;
+            if (ability == null || !WasPrimaryButtonPressed())
             {
-                if (IsPowerModifierHeld())
+                return;
+            }
+
+            PixelAbilityContext context = BuildContext();
+            if (IsPowerModifierHeld())
+            {
+                if (ultimateTimer <= 0f)
                 {
-                    if (ultimateTimer <= 0f)
-                    {
-                        CastUltimate();
-                        ultimateTimer = ultimateCooldown;
-                    }
+                    TriggerCasterAttack();
+                    ExecutePlayerSpellWrites(() => ability.CastUltimate(context));
+                    ultimateTimer = ability.UltimateCooldown;
                 }
-                else if (IsControlModifierHeld())
+            }
+            else if (IsControlModifierHeld())
+            {
+                if (specialTimer <= 0f)
                 {
-                    if (specialTimer <= 0f)
-                    {
-                        CastSpecial();
-                        specialTimer = specialCooldown;
-                    }
+                    TriggerCasterAttack();
+                    ExecutePlayerSpellWrites(() => ability.CastSpecial(context));
+                    specialTimer = ability.SpecialCooldown;
                 }
-                else if (normalTimer <= 0f)
+            }
+            else if (normalTimer <= 0f)
+            {
+                TriggerCasterAttack();
+                int beforeCount = projectiles.Count;
+                ExecutePlayerSpellWrites(() => ability.CastNormal(context, projectiles));
+                for (int i = beforeCount; i < projectiles.Count; i++)
                 {
-                    CastNormal();
-                    normalTimer = normalCooldown;
+                    AttachProjectileVisual(projectiles[i]);
                 }
+
+                normalTimer = ability.NormalCooldown;
             }
         }
 
@@ -140,264 +168,13 @@ namespace NoitaCA
             }
         }
 
-        private void CastNormal()
-        {
-            Vector3 aimWorld = TryGetAimCell(maxSpellRangeCells, out Vector2Int aimCell)
-                ? worldRenderer.CellToWorldCenter(aimCell.x, aimCell.y)
-                : GetPointerWorldPosition();
-            Vector3 origin = caster.position;
-            Vector3 direction = aimWorld - origin;
-            direction.z = 0f;
-            if (direction.sqrMagnitude <= 0.0001f)
-            {
-                direction = Vector3.right;
-            }
-
-            direction.Normalize();
-            TriggerCasterAttack();
-            Projectile projectile = new Projectile
-            {
-                Element = selectedElement,
-                Position = origin + direction * 0.35f,
-                Velocity = direction * projectileSpeed,
-                Gravity = 0f,
-                TimeRemaining = projectileLifetime,
-                TrailTimer = 0f,
-                Visual = CreateProjectileVisual(selectedElement)
-            };
-
-            if (projectile.Visual != null)
-            {
-                projectile.Visual.transform.position = projectile.Position;
-            }
-
-            projectiles.Add(projectile);
-        }
-
-        private void CastSpecial()
-        {
-            TriggerCasterAttack();
-            Vector2Int originCell = worldRenderer.WorldToCell(caster.position);
-            Vector2Int aimCell = worldRenderer.WorldToCell(GetPointerWorldPosition());
-            Vector2 direction = (Vector2)(aimCell - originCell);
-            if (direction.sqrMagnitude <= 0.001f)
-            {
-                direction = Vector2.right;
-            }
-
-            direction.Normalize();
-            CastElementLaser(originCell, direction);
-        }
-
-        private void CastElementLaser(Vector2Int originCell, Vector2 direction)
-        {
-            Vector2 perpendicular = new Vector2(-direction.y, direction.x);
-            int range = selectedElement == SpellElement.Fire ? 126 : selectedElement == SpellElement.Frost ? 156 : 138;
-            int beamHalfWidth = selectedElement == SpellElement.Frost ? 1 : 2;
-
-            for (int distance = 2; distance <= range; distance++)
-            {
-                Vector2 center = originCell + direction * distance;
-                bool blocked = false;
-
-                for (int widthOffset = -beamHalfWidth; widthOffset <= beamHalfWidth; widthOffset++)
-                {
-                    Vector2Int cell = new Vector2Int(
-                        Mathf.RoundToInt(center.x + perpendicular.x * widthOffset),
-                        Mathf.RoundToInt(center.y + perpendicular.y * widthOffset));
-
-                    if (!grid.InBounds(cell.x, cell.y))
-                    {
-                        blocked = true;
-                        continue;
-                    }
-
-                    MaterialType material = grid.GetMaterial(cell.x, cell.y);
-                    if (grid.IsSolid(cell.x, cell.y))
-                    {
-                        ApplyLaserImpact(cell, material);
-                        blocked = true;
-                        continue;
-                    }
-
-                    ApplyLaserCell(cell, distance, widthOffset);
-                }
-
-                if (blocked && distance > 4)
-                {
-                    break;
-                }
-            }
-        }
-
-        private void ApplyLaserCell(Vector2Int cell, int distance, int widthOffset)
-        {
-            if (selectedElement == SpellElement.Fire)
-            {
-                grid.SetMaterial(cell.x, cell.y, widthOffset == 0 || (distance & 1) == 0 ? MaterialType.Fire : MaterialType.Smoke);
-                return;
-            }
-
-            if (selectedElement == SpellElement.Frost)
-            {
-                ExtinguishCircle(cell, 1);
-                grid.SetMaterial(cell.x, cell.y, MaterialType.Water);
-                if (widthOffset == 0 && (distance % 5) == 0)
-                {
-                    FreezeSolidEdges(cell, 1);
-                }
-                return;
-            }
-
-            grid.SetMaterial(cell.x, cell.y, MaterialType.Poison);
-            if (widthOffset == 0 && (distance % 4) == 0)
-            {
-                grid.SpawnMaterial(cell, MaterialType.Poison, 3, 1);
-            }
-        }
-
-        private void ApplyLaserImpact(Vector2Int cell, MaterialType material)
-        {
-            if (selectedElement == SpellElement.Fire)
-            {
-                if (material == MaterialType.Wood)
-                {
-                    grid.IgniteCircle(cell, 4);
-                }
-                else
-                {
-                    grid.SpawnMaterial(cell, MaterialType.Fire, 8, 3);
-                    grid.SpawnMaterial(cell, MaterialType.Smoke, 6, 3);
-                }
-                return;
-            }
-
-            if (selectedElement == SpellElement.Frost)
-            {
-                ExtinguishCircle(cell, 4);
-                FreezeSolidEdges(cell, 3);
-                grid.SpawnMaterial(cell, MaterialType.Water, 12, 3);
-                return;
-            }
-
-            grid.SpawnMaterial(cell, MaterialType.Poison, 14, 3);
-        }
-
-        private void CastUltimate()
-        {
-            TriggerCasterAttack();
-            Vector2Int originCell = worldRenderer.WorldToCell(caster.position);
-            Vector2Int aimCell = worldRenderer.WorldToCell(GetPointerWorldPosition());
-            Vector2 direction = (Vector2)(aimCell - originCell);
-            if (direction.sqrMagnitude <= 0.001f)
-            {
-                direction = Vector2.right;
-            }
-
-            direction.Normalize();
-            float baseAngle = Mathf.Atan2(direction.y, direction.x);
-            int range = selectedElement == SpellElement.Fire ? 58 : 50;
-            int rays = selectedElement == SpellElement.Fire ? 43 : 35;
-            float coneRadians = selectedElement == SpellElement.Fire ? 96f * Mathf.Deg2Rad : 78f * Mathf.Deg2Rad;
-
-            for (int ray = 0; ray < rays; ray++)
-            {
-                float t = rays <= 1 ? 0.5f : ray / (float)(rays - 1);
-                float angle = baseAngle + Mathf.Lerp(-coneRadians * 0.5f, coneRadians * 0.5f, t);
-                Vector2 rayDirection = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
-                Vector2 perpendicular = new Vector2(-rayDirection.y, rayDirection.x);
-
-                for (int distance = 2; distance <= range; distance += 2)
-                {
-                    Vector2 center = originCell + rayDirection * distance;
-                    int forwardSpread = Mathf.Clamp(distance / 12, 0, 4);
-                    bool blocked = false;
-
-                    for (int spread = -forwardSpread; spread <= forwardSpread; spread++)
-                    {
-                        Vector2Int cell = new Vector2Int(
-                            Mathf.RoundToInt(center.x + perpendicular.x * spread),
-                            Mathf.RoundToInt(center.y + perpendicular.y * spread));
-
-                        if (!grid.InBounds(cell.x, cell.y))
-                        {
-                            blocked = true;
-                            continue;
-                        }
-
-                        ApplyUltimateCell(cell, distance);
-                        if (grid.IsSolid(cell.x, cell.y) && grid.GetMaterial(cell.x, cell.y) != MaterialType.Wood)
-                        {
-                            blocked = true;
-                        }
-                    }
-
-                    if (blocked && distance > 10)
-                    {
-                        break;
-                    }
-                }
-            }
-        }
-
-        private void ApplyUltimateCell(Vector2Int cell, int distance)
-        {
-            if (selectedElement == SpellElement.Fire)
-            {
-                if (grid.GetMaterial(cell.x, cell.y) == MaterialType.Wood)
-                {
-                    grid.IgniteCircle(cell, 3);
-                }
-                else if (!grid.IsSolid(cell.x, cell.y))
-                {
-                    grid.SetMaterial(cell.x, cell.y, MaterialType.Fire);
-                    if ((distance & 3) == 0)
-                    {
-                        grid.SpawnMaterial(cell, MaterialType.Smoke, 4, 2);
-                    }
-
-                    if (distance > 42 && (distance % 6) == 0)
-                    {
-                        grid.SpawnMaterial(cell, MaterialType.Fire, 6, 3);
-                    }
-                }
-
-                return;
-            }
-
-            if (selectedElement == SpellElement.Frost)
-            {
-                ExtinguishCircle(cell, 2);
-                if (!grid.IsSolid(cell.x, cell.y))
-                {
-                    grid.SetMaterial(cell.x, cell.y, MaterialType.Water);
-                }
-
-                if ((distance % 5) == 0)
-                {
-                    FreezeSolidEdges(cell, 2);
-                    grid.SpawnMaterial(cell, MaterialType.Water, 5, 2);
-                }
-
-                return;
-            }
-
-            if (!grid.IsSolid(cell.x, cell.y))
-            {
-                grid.SetMaterial(cell.x, cell.y, MaterialType.Poison);
-                if ((distance % 5) == 0)
-                {
-                    grid.SpawnMaterial(cell, MaterialType.Poison, 5, 2);
-                }
-            }
-        }
-
         private void StepProjectiles()
         {
+            PixelAbilityContext context = BuildContext();
             float cellWorldSize = 1f / Mathf.Max(1, worldRenderer.PixelsPerUnit);
             for (int i = projectiles.Count - 1; i >= 0; i--)
             {
-                Projectile projectile = projectiles[i];
+                PixelProjectile projectile = projectiles[i];
                 projectile.TimeRemaining -= Time.deltaTime;
                 projectile.Velocity += Vector3.up * projectile.Gravity * Time.deltaTime;
                 Vector3 delta = projectile.Velocity * Time.deltaTime;
@@ -415,10 +192,15 @@ namespace NoitaCA
                         break;
                     }
 
-                    LeaveProjectileTrail(projectile, cell);
-                    if (grid.IsSolid(cell.x, cell.y))
+                    projectile.TrailTimer -= Time.deltaTime;
+                    if (projectile.TrailTimer <= 0f && !grid.IsSolid(cell.x, cell.y))
                     {
-                        ResolveImpact(projectile.Element, cell);
+                        ExecutePlayerSpellWrites(() => projectile.Ability.LeaveProjectileTrail(context, projectile, cell));
+                    }
+
+                    if (grid.IsSolid(cell.x, cell.y) || PixelCreatureRegistry.HasCreatureInCircle(cell, 2f))
+                    {
+                        ExecutePlayerSpellWrites(() => projectile.Ability.ResolveImpact(context, cell));
                         impacted = true;
                         break;
                     }
@@ -426,7 +208,8 @@ namespace NoitaCA
 
                 if (!impacted && projectile.TimeRemaining <= 0f)
                 {
-                    ResolveImpact(projectile.Element, worldRenderer.WorldToCell(projectile.Position));
+                    Vector2Int impactCell = worldRenderer.WorldToCell(projectile.Position);
+                    ExecutePlayerSpellWrites(() => projectile.Ability.ResolveImpact(context, impactCell));
                     impacted = true;
                 }
 
@@ -437,151 +220,116 @@ namespace NoitaCA
 
                 if (impacted)
                 {
-                    if (projectile.Visual != null)
-                    {
-                        Destroy(projectile.Visual);
-                    }
-
+                    DestroyProjectileVisual(projectile);
                     projectiles.RemoveAt(i);
                 }
             }
         }
 
-        private void LeaveProjectileTrail(Projectile projectile, Vector2Int cell)
+        private void ExecutePlayerSpellWrites(System.Action action)
         {
-            projectile.TrailTimer -= Time.deltaTime;
-            if (projectile.TrailTimer > 0f || !grid.InBounds(cell.x, cell.y) || grid.IsSolid(cell.x, cell.y))
+            if (action == null)
             {
                 return;
             }
 
-            projectile.TrailTimer = projectile.Element == SpellElement.Poison ? 0.035f : 0.055f;
-            if (projectile.Element == SpellElement.Fire)
+            if (casterPlayer == null || grid == null)
             {
-                if ((cell.x + cell.y) % 3 == 0)
-                {
-                    grid.SetMaterial(cell.x, cell.y, MaterialType.Fire);
-                }
-                else
-                {
-                    grid.SetMaterial(cell.x, cell.y, MaterialType.Smoke);
-                }
+                action();
+                return;
             }
-            else if (projectile.Element == SpellElement.Frost)
+
+            grid.BeginPlayerSpellWrites();
+            try
             {
-                grid.SetMaterial(cell.x, cell.y, MaterialType.Water);
+                action();
             }
-            else
+            finally
             {
-                grid.SetMaterial(cell.x, cell.y, MaterialType.Poison);
+                grid.EndPlayerSpellWrites();
             }
         }
 
-        private void ResolveImpact(SpellElement element, Vector2Int cell)
+        private PixelAbilityContext BuildContext()
         {
-            if (!grid.InBounds(cell.x, cell.y))
+            Vector3 aimWorld = TryGetAimCell(maxSpellRangeCells, out Vector2Int aimCell)
+                ? worldRenderer.CellToWorldCenter(aimCell.x, aimCell.y)
+                : GetPointerWorldPosition();
+            Vector2Int originCell = worldRenderer.WorldToCell(caster.position);
+            return new PixelAbilityContext
+            {
+                Grid = grid,
+                Renderer = worldRenderer,
+                Camera = targetCamera,
+                Caster = caster,
+                AimWorld = aimWorld,
+                OriginCell = originCell,
+                AimCell = aimCell
+            };
+        }
+
+        private void BuildAbilityList()
+        {
+            abilities.Clear();
+            if (startingAbilities != null)
+            {
+                for (int i = 0; i < startingAbilities.Length; i++)
+                {
+                    if (startingAbilities[i] != null && !abilities.Contains(startingAbilities[i]))
+                    {
+                        abilities.Add(startingAbilities[i]);
+                    }
+                }
+            }
+
+            if (abilities.Count == 0)
+            {
+                abilities.AddRange(PixelAbilitySet.CreateRuntimeDefaults());
+            }
+
+            selectedAbilityIndex = Mathf.Clamp(selectedAbilityIndex, 0, Mathf.Max(0, abilities.Count - 1));
+            for (int i = 0; i < abilities.Count; i++)
+            {
+                EnsureProjectileSprite(abilities[i]);
+            }
+        }
+
+        private void AttachProjectileVisual(PixelProjectile projectile)
+        {
+            if (projectile == null || projectile.Ability == null)
             {
                 return;
             }
 
-            if (element == SpellElement.Fire)
-            {
-                if (grid.GetMaterial(cell.x, cell.y) == MaterialType.Wood)
-                {
-                    grid.IgniteCircle(cell, 6);
-                    grid.SpawnMaterial(cell, MaterialType.Fire, 16, 4);
-                    grid.SpawnMaterial(cell, MaterialType.Smoke, 10, 5);
-                }
-                else
-                {
-                    grid.ExplodeCircle(cell, 4);
-                    grid.IgniteCircle(cell, 6);
-                }
-
-                return;
-            }
-
-            if (element == SpellElement.Frost)
-            {
-                ExtinguishCircle(cell, 6);
-                grid.SpawnMaterial(cell, MaterialType.Water, 46, 6);
-                FreezeSolidEdges(cell, 4);
-                return;
-            }
-
-            grid.SpawnMaterial(cell, MaterialType.Poison, 56, 6);
-            grid.SpawnMaterial(cell, MaterialType.Smoke, 6, 4);
+            GameObject projectileObject = new GameObject(projectile.Ability.DisplayName + " Projectile");
+            projectileObject.transform.SetParent(transform.parent, true);
+            SpriteRenderer renderer = projectileObject.AddComponent<SpriteRenderer>();
+            renderer.sprite = EnsureProjectileSprite(projectile.Ability);
+            renderer.sortingOrder = 12;
+            projectileObject.transform.position = projectile.Position;
+            projectile.Visual = projectileObject;
         }
 
-        private void ExtinguishCircle(Vector2Int center, int radius)
+        private Sprite EnsureProjectileSprite(PixelAbility ability)
         {
-            int radiusSquared = radius * radius;
-            for (int y = center.y - radius; y <= center.y + radius; y++)
+            if (ability == null)
             {
-                for (int x = center.x - radius; x <= center.x + radius; x++)
-                {
-                    if (!grid.InBounds(x, y))
-                    {
-                        continue;
-                    }
-
-                    int dx = x - center.x;
-                    int dy = y - center.y;
-                    if (dx * dx + dy * dy > radiusSquared)
-                    {
-                        continue;
-                    }
-
-                    MaterialType material = grid.GetMaterial(x, y);
-                    if (material == MaterialType.Fire || material == MaterialType.Lava)
-                    {
-                        grid.SetMaterial(x, y, material == MaterialType.Lava ? MaterialType.Stone : MaterialType.Smoke);
-                    }
-                }
-            }
-        }
-
-        private void FreezeSolidEdges(Vector2Int center, int radius)
-        {
-            int radiusSquared = radius * radius;
-            for (int y = center.y - radius; y <= center.y + radius; y++)
-            {
-                for (int x = center.x - radius; x <= center.x + radius; x++)
-                {
-                    if (!grid.InBounds(x, y))
-                    {
-                        continue;
-                    }
-
-                    int dx = x - center.x;
-                    int dy = y - center.y;
-                    if (dx * dx + dy * dy > radiusSquared || grid.IsSolid(x, y))
-                    {
-                        continue;
-                    }
-
-                    if (IsNearSolid(x, y) && ((x + y) & 1) == 0)
-                    {
-                        grid.SetMaterial(x, y, MaterialType.Ice);
-                    }
-                }
-            }
-        }
-
-        private bool IsNearSolid(int x, int y)
-        {
-            for (int oy = -1; oy <= 1; oy++)
-            {
-                for (int ox = -1; ox <= 1; ox++)
-                {
-                    if ((ox != 0 || oy != 0) && grid.IsSolid(x + ox, y + oy))
-                    {
-                        return true;
-                    }
-                }
+                return null;
             }
 
-            return false;
+            if (projectileSprites.TryGetValue(ability, out Sprite existing))
+            {
+                return existing;
+            }
+
+            Sprite sprite = ability.CreateProjectileSprite(worldRenderer != null ? worldRenderer.PixelsPerUnit : 16);
+            projectileSprites[ability] = sprite;
+            if (sprite != null && sprite.texture != null)
+            {
+                generatedTextures.Add(sprite.texture);
+            }
+
+            return sprite;
         }
 
         private bool TryGetAimCell(int maxRangeCells, out Vector2Int cell)
@@ -614,109 +362,40 @@ namespace NoitaCA
             return worldPosition;
         }
 
-        private GameObject CreateProjectileVisual(SpellElement element)
+        private void OnDestroy()
         {
-            GameObject projectileObject = new GameObject(element + " Projectile");
-            projectileObject.transform.SetParent(transform.parent, true);
-            SpriteRenderer renderer = projectileObject.AddComponent<SpriteRenderer>();
-            renderer.sprite = GetProjectileSprite(element);
-            renderer.sortingOrder = 12;
-            return projectileObject;
-        }
-
-        private Sprite GetProjectileSprite(SpellElement element)
-        {
-            if (element == SpellElement.Fire)
+            for (int i = 0; i < projectiles.Count; i++)
             {
-                return fireSprite;
+                DestroyProjectileVisual(projectiles[i]);
             }
 
-            return element == SpellElement.Frost ? frostSprite : poisonSprite;
-        }
-
-        private void BuildProjectileSprites()
-        {
-            if (fireSprite != null || worldRenderer == null)
+            foreach (KeyValuePair<PixelAbility, Sprite> pair in projectileSprites)
             {
-                return;
-            }
-
-            fireSprite = BuildProjectileSprite(SpellElement.Fire, out fireTexture, "Fire Projectile Sprite");
-            frostSprite = BuildProjectileSprite(SpellElement.Frost, out frostTexture, "Frost Projectile Sprite");
-            poisonSprite = BuildProjectileSprite(SpellElement.Poison, out poisonTexture, "Poison Projectile Sprite");
-        }
-
-        private Sprite BuildProjectileSprite(SpellElement element, out Texture2D texture, string spriteName)
-        {
-            const int size = 5;
-            texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
-            texture.filterMode = FilterMode.Point;
-            Color32 transparent = new Color32(0, 0, 0, 0);
-            Color32[] colors = new Color32[size * size];
-            for (int i = 0; i < colors.Length; i++)
-            {
-                colors[i] = transparent;
-            }
-
-            if (element == SpellElement.Fire)
-            {
-                Color32 hot = new Color32(255, 225, 86, 255);
-                Color32 fire = new Color32(255, 96, 26, 255);
-                Color32 ember = new Color32(170, 31, 15, 255);
-                SetPixel(colors, size, size, 2, 4, hot);
-                FillRect(colors, size, size, 1, 2, 3, 2, fire);
-                FillRect(colors, size, size, 2, 1, 2, 2, ember);
-                SetPixel(colors, size, size, 0, 2, ember);
-                SetPixel(colors, size, size, 2, 2, hot);
-            }
-            else if (element == SpellElement.Frost)
-            {
-                Color32 water = new Color32(56, 146, 236, 220);
-                Color32 shine = new Color32(168, 236, 255, 255);
-                FillRect(colors, size, size, 2, 0, 1, 5, water);
-                FillRect(colors, size, size, 0, 2, 5, 1, water);
-                SetPixel(colors, size, size, 1, 3, shine);
-                SetPixel(colors, size, size, 3, 1, shine);
-                SetPixel(colors, size, size, 2, 2, shine);
-            }
-            else
-            {
-                Color32 poison = new Color32(68, 222, 66, 235);
-                Color32 dark = new Color32(26, 116, 38, 255);
-                Color32 shine = new Color32(168, 255, 112, 255);
-                FillRect(colors, size, size, 1, 1, 3, 3, poison);
-                SetPixel(colors, size, size, 2, 4, poison);
-                SetPixel(colors, size, size, 0, 2, dark);
-                SetPixel(colors, size, size, 4, 2, dark);
-                SetPixel(colors, size, size, 2, 2, shine);
-            }
-
-            texture.SetPixels32(colors);
-            texture.Apply(false);
-            Sprite sprite = Sprite.Create(texture, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), worldRenderer.PixelsPerUnit);
-            sprite.name = spriteName;
-            return sprite;
-        }
-
-        private static void FillRect(Color32[] colors, int width, int height, int x, int y, int rectWidth, int rectHeight, Color32 color)
-        {
-            for (int py = y; py < y + rectHeight; py++)
-            {
-                for (int px = x; px < x + rectWidth; px++)
+                if (pair.Value != null)
                 {
-                    SetPixel(colors, width, height, px, py, color);
+                    DestroyObject(pair.Value);
                 }
             }
-        }
 
-        private static void SetPixel(Color32[] colors, int width, int height, int x, int y, Color32 color)
-        {
-            if (x < 0 || x >= width || y < 0 || y >= height)
+            for (int i = 0; i < generatedTextures.Count; i++)
             {
-                return;
+                if (generatedTextures[i] != null)
+                {
+                    DestroyObject(generatedTextures[i]);
+                }
             }
 
-            colors[y * width + x] = color;
+            projectileSprites.Clear();
+            generatedTextures.Clear();
+        }
+
+        private static void DestroyProjectileVisual(PixelProjectile projectile)
+        {
+            if (projectile != null && projectile.Visual != null)
+            {
+                Destroy(projectile.Visual);
+                projectile.Visual = null;
+            }
         }
 
         private static Vector3 ReadPointerScreenPosition()
@@ -816,44 +495,11 @@ namespace NoitaCA
 #endif
         }
 
-        private void OnDestroy()
+        private void TriggerCasterAttack()
         {
-            for (int i = 0; i < projectiles.Count; i++)
+            if (casterPlayer != null)
             {
-                if (projectiles[i].Visual != null)
-                {
-                    Destroy(projectiles[i].Visual);
-                }
-            }
-
-            if (fireSprite != null)
-            {
-                DestroyObject(fireSprite);
-            }
-
-            if (frostSprite != null)
-            {
-                DestroyObject(frostSprite);
-            }
-
-            if (poisonSprite != null)
-            {
-                DestroyObject(poisonSprite);
-            }
-
-            if (fireTexture != null)
-            {
-                DestroyObject(fireTexture);
-            }
-
-            if (frostTexture != null)
-            {
-                DestroyObject(frostTexture);
-            }
-
-            if (poisonTexture != null)
-            {
-                DestroyObject(poisonTexture);
+                casterPlayer.TriggerAttackAnimation();
             }
         }
 
@@ -871,14 +517,6 @@ namespace NoitaCA
             else
             {
                 DestroyImmediate(target);
-            }
-        }
-
-        private void TriggerCasterAttack()
-        {
-            if (casterPlayer != null)
-            {
-                casterPlayer.TriggerAttackAnimation();
             }
         }
     }
