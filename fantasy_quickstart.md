@@ -1,0 +1,397 @@
+# Unity 客户端快速开始
+
+本指南将帮助你快速在 Unity 项目中集成 Fantasy Framework,并实现与服务器的网络通信。
+
+## 前置要求
+
+在开始之前,请确保:
+
+- ✅ Unity 版本 **2022.3.62 LTS** 或更高
+- ✅ 已了解 C# 和 Unity 基础开发知识
+- ✅ (可选) 已搭建 Fantasy 服务器并启动
+
+> **💡 提示：** 如果你还没有服务器，可以使用 Fantasy CLI 快速创建一个：
+> ```bash
+> # 安装 Fantasy CLI
+> dotnet tool install -g Fantasy.Cli
+>
+> # 创建服务器项目（包含协议定义工具）
+> fantasy init -n MyGameServer
+> ```
+>
+> **⚠️ macOS/Linux 用户注意：** 如果安装后无法使用 `fantasy` 命令，请查看 [Fantasy CLI 文档](../../Fantasy.Packages/Fantasy.Cil/README.md) 配置 PATH。
+>
+> 详见 [服务器端快速开始](01-QuickStart-Server.md) 文档。
+
+---
+
+## 安装 Fantasy.Unity
+
+Fantasy.Unity 支持两种安装方式,推荐使用 **OpenUPM** 方式安装。
+
+### 方式一: 通过 OpenUPM 安装 (推荐)
+
+OpenUPM 是 Unity 包管理器的第三方注册表服务,可以轻松管理和更新包版本。
+
+#### 选项 A: 使用 Package Manager UI 安装
+
+这是最直观的安装方式,适合不熟悉 JSON 配置的用户:
+
+1. **打开 Project Settings**
+   - 在 Unity 菜单栏选择 `Edit` → `Project Settings`
+
+2. **配置 Package Manager**
+   - 在左侧面板选择 `Package Manager`
+   - 点击 `Scoped Registries` 区域的 `+` 按钮添加新的注册表
+
+3. **添加 OpenUPM 注册表**
+
+   填写以下信息:
+
+   | 字段 | 值 |
+   |------|-----|
+   | **Name** | `package.openupm.com` |
+   | **URL** | `https://package.openupm.com` |
+   | **Scope(s)** | `com.fantasy.unity` |
+
+4. **保存设置**
+   - 点击 `Save` 或 `Apply` 按钮
+
+5. **安装 Fantasy.Unity 包**
+   - 打开 Package Manager: `Window` → `Package Manager`
+   - 点击左上角的 `+` 按钮
+   - 选择 `Add package by name...` 或 `Add package from git URL...`
+   - 在 **Name** 字段输入: `com.fantasy.unity`
+   - 在 **Version** 字段输入版本号 (例如 `2025.2.1402`)
+     - 💡 **提示**: 可以指定特定版本号,也可以留空使用最新版本
+     - ✅ **建议**: 使用最新版本以获得最新功能和 Bug 修复
+   - 点击 `Add` 按钮
+
+6. **等待导入完成**
+   - Unity 会自动下载并导入 Fantasy.Unity 包及其依赖项
+   - 导入完成后,在 Package Manager 中可以看到 `Fantasy.Unity` 包
+
+---
+
+#### 选项 B: 通过 manifest.json 安装
+
+这是更快捷的安装方式,适合熟悉 Unity 包管理的用户:
+
+1. **定位 manifest.json 文件**
+
+   在你的 Unity 项目根目录下找到:
+   ```
+   YourProject/
+   └── Packages/
+       └── manifest.json
+   ```
+
+2. **编辑 manifest.json**
+
+   使用文本编辑器打开 `manifest.json`,将以下内容合并到文件中:
+
+   ```json
+   {
+       "scopedRegistries": [
+           {
+               "name": "package.openupm.com",
+               "url": "https://package.openupm.com",
+               "scopes": [
+                   "com.fantasy.unity"
+               ]
+           }
+       ],
+       "dependencies": {
+           "com.fantasy.unity": "2025.2.1402"
+       }
+   }
+   ```
+
+   **版本说明:**
+   - 💡 可以指定特定版本号 (例如 `"2025.2.1402"`)
+   - ✅ **建议使用最新版本** - 删除版本号让 Unity 自动获取最新版,或访问 [OpenUPM](https://openupm.com/packages/com.fantasy.unity/) 查看最新版本号
+
+   **完整示例:**
+
+   假设你的原始 `manifest.json` 内容为:
+   ```json
+   {
+       "dependencies": {
+           "com.unity.collab-proxy": "2.0.0",
+           "com.unity.ide.rider": "3.0.18"
+       }
+   }
+   ```
+
+   合并后应该是:
+   ```json
+   {
+       "scopedRegistries": [
+           {
+               "name": "package.openupm.com",
+               "url": "https://package.openupm.com",
+               "scopes": [
+                   "com.fantasy.unity"
+               ]
+           }
+       ],
+       "dependencies": {
+           "com.unity.collab-proxy": "2.0.0",
+           "com.unity.ide.rider": "3.0.18",
+           "com.fantasy.unity": "2025.2.1402"  // 可以指定版本号,或删除引号中的版本号使用最新版
+       }
+   }
+   ```
+
+   > 💡 **版本号提示**: `"2025.2.1402"` 可以改为其他版本号,或删除版本号部分改为 `"com.fantasy.unity": ""` 让 Unity 自动使用最新版
+
+3. **保存并返回 Unity**
+   - 保存 `manifest.json` 文件
+   - 返回 Unity 编辑器
+   - Unity 会自动检测文件变化并开始下载安装包
+
+---
+
+### 方式二: 手动安装本地源码
+
+如果你需要修改框架源码或调试框架内部逻辑,可以使用本地源码安装:
+
+1. **克隆或下载 Fantasy 源码**
+
+   ```bash
+   # 使用 Git 克隆
+   git clone https://github.com/qq362946/Fantasy.git
+
+   # 或者下载 ZIP 并解压
+   ```
+
+2. **复制 Unity 包到项目**
+
+   将 Fantasy 源码中的 Unity 包复制到你的项目:
+
+   ```
+   Fantasy/
+   └── Fantasy.Packages/
+       └── Fantasy.Unity/       # 这个目录就是 Unity 包
+   ```
+
+   复制到:
+
+   ```
+   YourProject/
+   └── Packages/
+       └── com.fantasy.unity/   # 将 Fantasy.Packages/Fantasy.Unity 复制到这里
+   ```
+
+3. **编辑 manifest.json**
+
+   打开 `Packages/manifest.json`,添加本地包引用:
+
+   ```json
+   {
+       "dependencies": {
+           "com.fantasy.unity": "file:com.fantasy.unity"
+       }
+   }
+   ```
+
+4. **返回 Unity**
+   - Unity 会自动识别本地包
+   - 在 Package Manager 中可以看到 `Fantasy.Unity (local)` 包
+
+**本地安装的优点:**
+- ✅ 可以修改框架源码
+- ✅ 便于调试和追踪问题
+- ✅ 不依赖网络连接
+
+**本地安装的缺点:**
+- ⚠️ 需要手动更新版本
+- ⚠️ 占用更多磁盘空间
+- ⚠️ 需要自行维护源码
+
+---
+
+## 配置 Fantasy 环境
+
+安装包完成后，需要配置 Fantasy 编译符号才能正常使用。
+
+### 安装 FANTASY_UNITY 编译符号
+
+1. **打开 Fantasy Settings**
+   - 在 Unity 菜单栏选择 `Fantasy` → `Fantasy Settings`
+   - 会打开 Fantasy 设置面板
+
+2. **安装编译符号**
+   - 在设置面板中找到 **Scripting Define Symbols** 区域
+   - 检查 `FANTASY_UNITY` 的状态:
+     - ✅ 如果显示 **"已安装"** 或 **"Installed"**，则无需操作
+     - ⚠️ 如果显示 **"未安装"** 或 **"Not Installed"**，点击 **"安装"** 或 **"Install"** 按钮
+
+3. **等待编译完成**
+   - Unity 会自动添加 `FANTASY_UNITY` 编译符号并重新编译
+   - 编译完成后，Fantasy 框架即可正常使用
+
+**为什么需要这一步？**
+
+- `FANTASY_UNITY` 是 Fantasy 框架的编译符号
+- 它会激活 Unity 平台相关的代码和 Source Generator
+- 没有这个符号，框架的核心功能将无法使用
+
+---
+
+### WebGL 平台额外配置
+
+如果你的项目需要构建到 **WebGL 平台**，还需要额外安装 `FANTASY_WEBGL` 编译符号。
+
+1. **打开 Fantasy Settings**
+   - 在 Unity 菜单栏选择 `Fantasy` → `Fantasy Settings`
+   - 会打开 Fantasy 设置面板
+
+2. **安装 WebGL 编译符号**
+   - 在设置面板中找到 **Scripting Define Symbols** 区域
+   - 检查 `FANTASY_WEBGL` 的状态:
+     - ✅ 如果显示 **"已安装"** 或 **"Installed"**，则无需操作
+     - ⚠️ 如果显示 **"未安装"** 或 **"Not Installed"**，点击 **"安装"** 或 **"Install"** 按钮
+
+3. **等待编译完成**
+   - Unity 会自动添加 `FANTASY_WEBGL` 编译符号并重新编译
+   - 编译完成后，项目即可构建到 WebGL 平台
+
+**为什么 WebGL 需要额外配置？**
+
+- `FANTASY_WEBGL` 是 WebGL 平台的专用编译符号
+- 它会激活 WebGL 平台特定的网络代码（WebSocket）
+- WebGL 平台有浏览器安全限制，需要特殊处理
+- 只在需要构建 WebGL 时才安装此符号
+
+**⚠️ 重要提示：**
+
+- 如果**不需要构建 WebGL**，不要安装此符号
+- WebGL 平台只支持 **WebSocket** 协议，不支持 KCP 和 TCP
+- WebGL 构建需要服务器支持 WebSocket 连接
+
+---
+
+## 验证安装
+
+配置完成后，验证 Fantasy.Unity 是否正确安装:
+
+1. **检查 Package Manager**
+   - 打开 `Window` → `Package Manager`
+   - 在左上角选择 `Packages: In Project`
+   - 确认列表中有 `Fantasy.Unity` 包
+
+2. **检查编译符号**
+   - 打开 `Fantasy` → `Fantasy Settings`
+   - 确认 `FANTASY_UNITY` 显示为 **"已安装"**
+   - （如果需要 WebGL 构建）确认 `FANTASY_WEBGL` 显示为 **"已安装"**
+
+3. **检查命名空间**
+
+   创建一个测试脚本:
+
+   ```csharp
+   using Fantasy;
+   using Fantasy.Async;
+   using Fantasy.Network;
+   using UnityEngine;
+
+   public class FantasyTest : MonoBehaviour
+   {
+       void Start()
+       {
+           Debug.Log("Fantasy.Unity 安装成功!");
+       }
+   }
+   ```
+
+   如果没有命名空间错误，说明安装成功。
+
+---
+
+## 示例项目
+
+Fantasy 仓库中提供了完整的 Unity 客户端示例项目:
+
+```
+Fantasy/
+└── Examples/
+    └── Client/
+        └── Unity/
+            └── Assets/
+                └── Scripts/
+                    └── Examples/
+                        ├── ConnectToServer/      # 连接服务器示例
+                        ├── NormalMessage/        # 普通消息示例
+                        ├── RouteMessage/         # 路由消息示例
+                        ├── Addressable/          # Addressable 示例
+                        ├── EventSystem/          # 事件系统示例
+                        └── ...                   # 更多示例
+```
+
+**推荐学习顺序:**
+1. `ConnectToServer/` - 学习如何连接服务器
+2. `NormalMessage/` - 学习消息发送和接收
+3. `RouteMessage/` - 学习路由消息
+4. `EventSystem/` - 学习事件系统
+
+---
+
+## 常见问题
+
+### Q1: 如何配合服务器使用网络协议？
+
+**推荐流程：**
+
+1. **使用 Fantasy CLI 创建服务器项目**（包含协议工具）
+   ```bash
+   fantasy init -n MyGameServer
+   ```
+
+2. **在服务器项目中定义协议**
+   - 编辑 `Tools/NetworkProtocol/*.proto` 文件
+   - 运行协议导出工具生成代码
+
+3. **将生成的协议代码复制到 Unity**
+   - 服务器和客户端使用相同的协议定义
+   - 确保 OpCode 和消息结构一致
+
+详见 [协议定义指南](../03-Advanced/06-Protocol.md)（规划中）
+
+### Q2: 安装后找不到 Fantasy 命名空间?
+
+**解决方法:**
+
+1. **重新导入包**
+    - `Assets` → `Reimport All`
+    - 等待编译完成
+
+2. **检查程序集引用**
+    - 如果使用了 Assembly Definition (asmdef),确保引用了 `Fantasy.Unity`
+    - 在 asmdef 文件的 `Assembly Definition References` 中添加 `Fantasy.Unity`
+
+3. **重启 Unity 和 IDE**
+    - 关闭 Unity 和 Visual Studio/Rider
+    - 重新打开项目
+
+---
+
+## 下一步
+
+恭喜! 你已经完成了 Fantasy.Unity 的安装和Unity 客户端的基础使用。接下来可以:
+
+1. 🌐 阅读 [Unity 客户端编写启动代码](../02-Unity/01-WritingStartupCode-Unity.md) 学习如何在Unity客户端编写启动代码
+2. 🔧 阅读 [协议定义指南](11-Protocol.md) 学习如何定义自己的消息协议 (待完善)
+3. 🎯 阅读 [网络消息处理](10-Message.md) 深入了解消息系统 (待完善)
+4. 📖 阅读 [ECS 系统详解](06-ECS.md) 学习客户端实体组件系统 (待完善)
+5. 🎮 阅读 [事件系统](22-Event.md) 学习客户端事件机制 (待完善)
+6. 📚 查看 `Examples/Client/Unity` 目录下的完整示例
+
+## 获取帮助
+
+- **GitHub**: https://github.com/qq362946/Fantasy
+- **文档**: https://www.code-fantasy.com/
+- **Issues**: https://github.com/qq362946/Fantasy/issues
+- **OpenUPM**: https://openupm.com/packages/com.fantasy.unity/
+
+---
