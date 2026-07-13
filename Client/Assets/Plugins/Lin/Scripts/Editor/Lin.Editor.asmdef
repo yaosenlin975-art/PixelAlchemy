@@ -1,0 +1,27 @@
+{
+    "name": "Lin.Editor",
+    "rootNamespace": "Lin.Editor",
+    "references": [
+        "GUID:ad8bd569ee0ced8468908e9cbb41a5f4",
+        "GUID:2a81c6962524d424a8ef5072bd3b0fa0",
+        "GUID:5796a4f593192714cbff2c4360722388",
+        "GUID:2373f786d14518f44b0f475db77ba4de",
+        "GUID:09e64ce3b45d3264abf5675f6f852943",
+        "GUID:b4b352b127d540a44bd3fc546f5a1cf2",
+        "GUID:6055be8ebefd69e48b49212b09b47b2f",
+        "GUID:f51ebe6a0ceec4240a699833d6309b23",
+        "GUID:4d1926c9df5b052469a1c63448b7609a",
+        "GUID:e34a5702dd353724aa315fb8011f08c3"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

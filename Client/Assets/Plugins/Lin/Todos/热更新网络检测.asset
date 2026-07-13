@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 01676a745bd232e4ba244cf86bca2bf5, type: 3}
+  m_Name: "\u70ED\u66F4\u65B0\u7F51\u7EDC\u68C0\u6D4B"
+  m_EditorClassIdentifier: 
+  order: 3
+  title: "\u70ED\u66F4\u65B0\u7F51\u7EDC\u68C0\u6D4B"
+  tasks:
+  - title: "\u79FB\u52A8\u7F51\u7EDC"
+    description: "\u63D0\u9192\u672C\u6B21\u8981\u66F4\u65B0\u7684\u8D44\u6E90\u5927\u5C0F,
+      \u8BE2\u95EE\u662F\u5426\u7528\u79FB\u52A8\u7F51\u7EDC\u8FDB\u884C\u66F4\u65B0"
+    progress: 0
+    isEditing: 0
+    bulletPoints: []
+    references: []
+    useCustomTitleColor: 0
+    titleColor: {r: 0, g: 0, b: 0, a: 0}
+    useCustomBackgroundColor: 0
+    backgroundColor: {r: 0, g: 0, b: 0, a: 0}

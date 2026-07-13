@@ -1,0 +1,88 @@
+.container {
+    padding: 10px;
+}
+
+.title {
+    font-size: 16px;
+    -unity-font-style: bold;
+    margin-bottom: 10px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(0, 0, 0, 0.2);
+    padding-bottom: 5px;
+}
+
+.section-title {
+    font-size: 14px;
+    -unity-font-style: bold;
+    margin-top: 10px;
+    margin-bottom: 5px;
+}
+
+.label {
+    margin-top: 5px;
+    margin-bottom: 2px;
+}
+
+.color-row {
+    flex-direction: row;
+    align-items: center;
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+
+.color-field {
+    flex-grow: 1;
+    margin-left: 5px;
+    margin-right: 5px;
+}
+
+.small-button {
+    width: 40px;
+}
+
+.note-field {
+    min-height: 100px;
+    margin-bottom: 10px;
+}
+
+.info-box {
+    background-color: rgba(0, 0, 0, 0.1);
+    border-radius: 3px;
+    padding: 5px;
+    margin-top: 5px;
+    margin-bottom: 10px;
+}
+
+.info-text {
+    font-size: 12px;
+    white-space: normal;
+    margin: 2px 0;
+}
+
+.preview-box {
+    background-color: rgba(0, 0, 0, 0.05);
+    border-radius: 3px;
+    padding: 10px;
+    min-height: 50px;
+}
+
+.preview-text {
+    white-space: normal;
+}
+
+.button-row {
+    flex-direction: row;
+    justify-content: space-between;
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+.button {
+    min-width: 80px;
+}
+
+.delete-button {
+    margin-top: 5px;
+    background-color: rgba(255, 0, 0, 0.1);
+    border-color: rgba(255, 0, 0, 0.3);
+}

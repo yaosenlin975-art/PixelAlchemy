@@ -1,0 +1,15 @@
+D:\Unity\Projects\Noita\Server\Entity\obj\Debug\net8.0\Entity.csproj.AssemblyReference.cache
+D:\Unity\Projects\Noita\Server\Entity\obj\Debug\net8.0\Entity.GeneratedMSBuildEditorConfig.editorconfig
+D:\Unity\Projects\Noita\Server\Entity\obj\Debug\net8.0\Entity.AssemblyInfoInputs.cache
+D:\Unity\Projects\Noita\Server\Entity\obj\Debug\net8.0\Entity.AssemblyInfo.cs
+D:\Unity\Projects\Noita\Server\Entity\obj\Debug\net8.0\Entity.csproj.CoreCompileInputs.cache
+D:\Unity\Projects\Noita\Server\Entity\obj\Debug\net8.0\Entity.sourcelink.json
+D:\Unity\Projects\Noita\Server\Entity\bin\Debug\net8.0\Fantasy.xsd
+D:\Unity\Projects\Noita\Server\Entity\bin\Debug\net8.0\Fantasy.config
+D:\Unity\Projects\Noita\Server\Entity\bin\Debug\net8.0\Entity.deps.json
+D:\Unity\Projects\Noita\Server\Entity\bin\Debug\net8.0\Entity.dll
+D:\Unity\Projects\Noita\Server\Entity\bin\Debug\net8.0\Entity.pdb
+D:\Unity\Projects\Noita\Server\Entity\obj\Debug\net8.0\Entity.dll
+D:\Unity\Projects\Noita\Server\Entity\obj\Debug\net8.0\refint\Entity.dll
+D:\Unity\Projects\Noita\Server\Entity\obj\Debug\net8.0\Entity.pdb
+D:\Unity\Projects\Noita\Server\Entity\obj\Debug\net8.0\ref\Entity.dll

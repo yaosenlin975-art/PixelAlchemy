@@ -1,0 +1,6 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:VisualElement name="AssetContainer" style="flex-grow: 1; flex-direction: row; justify-content: space-between;">
+        <uie:ObjectField style="flex-grow: 1;" />
+        <ui:Button text="×" parse-escape-sequences="true" display-tooltip-when-elided="true" />
+    </ui:VisualElement>
+</ui:UXML>

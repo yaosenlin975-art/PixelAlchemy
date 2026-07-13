@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>主菜单 - Noita 竞技场</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style id="theme-vars">
+/* ============================================
+   Noita Game UI — Brand Design Tokens
+   Pixel Art Battle Game | RGB565 Palette
+   ============================================ */
+
+:root {
+  /* === Primary Palette (RGB565 derived) === */
+  --color-bg-deep: #0A0A14;
+  --color-bg: #0F0F1A;
+  --color-bg-elevated: #1A1A2E;
+  --color-bg-surface: #222240;
+  --color-border: #2D2D44;
+  --color-border-bright: #4A4A6A;
+  --color-text: #E8DCC8;
+  --color-text-dim: #8A8478;
+  --color-text-bright: #FFF5E6;
+
+  /* === Material Colors (from game docs) === */
+  --color-fire: #E8430A;
+  --color-fire-glow: #FF6B2B;
+  --color-ice: #07E8D0;
+  --color-ice-glow: #5BFFF0;
+  --color-poison: #7AE830;
+  --color-electric: #E8E007;
+  --color-blood: #E80730;
+  --color-holy: #F0E8B0;
+  --color-dark: #3A2868;
+  --color-nature: #2E8B20;
+  --color-water: #2068C0;
+  --color-earth: #A06030;
+  --color-air: #C0D0E0;
+
+  /* === State Colors === */
+  --state-danger: #F900;
+  --state-safe: #73FF;
+  --state-disabled: #514A;
+  --state-warning: #E8E007;
+  --state-info: #07E8D0;
+
+  /* === HP Bar Colors === */
+  --hp-full: #73FF;
+  --hp-high: #7AE830;
+  --hp-mid: #E8E007;
+  --hp-low: #E8430A;
+  --hp-critical: #F900;
+
+  /* === Accent — Fire Orange (primary identity) === */
+  --color-primary: #E8430A;
+  --color-primary-bright: #FF6B2B;
+  --color-primary-dim: #A03008;
+  --color-primary-bg: rgba(232, 67, 10, 0.15);
+
+  /* === Secondary — Ice Cyan (secondary identity) === */
+  --color-secondary: #07E8D0;
+  --color-secondary-bright: #5BFFF0;
+  --color-secondary-dim: #05A890;
+  --color-secondary-bg: rgba(7, 232, 208, 0.12);
+
+  /* === Typography === */
+  --font-pixel: 'Press Start 2P', 'DotGothic16', monospace;
+  --font-pixel-cn: 'DotGothic16', 'ZCOOL QingKe HuangYou', 'Press Start 2P', monospace;
+  --font-size-xs: 8px;
+  --font-size-sm: 10px;
+  --font-size-md: 12px;
+  --font-size-lg: 16px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 28px;
+  --font-size-3xl: 36px;
+  --line-height-tight: 1.2;
+  --line-height-normal: 1.4;
+
+  /* === Spacing (pixel-grid aligned) === */
+  --space-xs: 2px;
+  --space-sm: 4px;
+  --space-md: 8px;
+  --space-lg: 12px;
+  --space-xl: 16px;
+  --space-2xl: 24px;
+  --space-3xl: 32px;
+  --space-4xl: 48px;
+
+  /* === Shape — Pure pixel, no rounding === */
+  --radius-none: 0px;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+
+  /* === Border === */
+  --border-thin: 1px solid var(--color-border);
+  --border-normal: 2px solid var(--color-border);
+  --border-bright: 2px solid var(--color-border-bright);
+  --border-accent: 2px solid var(--color-primary);
+
+  /* === Pixel Shadow (hard offset, no blur) === */
+  --shadow-pixel-sm: 2px 2px 0px var(--color-bg-deep);
+  --shadow-pixel-md: 4px 4px 0px var(--color-bg-deep);
+  --shadow-pixel-lg: 6px 6px 0px var(--color-bg-deep);
+  --shadow-fire-sm: 2px 2px 0px var(--color-primary-dim);
+  --shadow-fire-md: 4px 4px 0px var(--color-primary-dim);
+
+  /* === Transitions (frame-step, no easing) === */
+  --transition-instant: none;
+  --transition-step: steps(4, end);
+  --transition-fast: 80ms steps(2, end);
+  --transition-normal: 160ms steps(4, end);
+
+  /* === Z-index layers === */
+  --z-base: 0;
+  --z-hud: 10;
+  --z-overlay: 50;
+  --z-modal: 100;
+  --z-tooltip: 200;
+}
+
+/* ============================================
+   Typography Classes
+   ============================================ */
+.text-pixel {
+  font-family: var(--font-pixel);
+  letter-spacing: 0.5px;
+  image-rendering: pixelated;
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: never;
+}
+
+.text-pixel-cn {
+  font-family: var(--font-pixel-cn);
+  letter-spacing: 1px;
+  image-rendering: pixelated;
+  -webkit-font-smoothing: none;
+}
+
+.text-xs { font-size: var(--font-size-xs); }
+.text-sm { font-size: var(--font-size-sm); }
+.text-md { font-size: var(--font-size-md); }
+.text-lg { font-size: var(--font-size-lg); }
+.text-xl { font-size: var(--font-size-xl); }
+.text-2xl { font-size: var(--font-size-2xl); }
+.text-3xl { font-size: var(--font-size-3xl); }
+
+.text-bright { color: var(--color-text-bright); }
+.text-dim { color: var(--color-text-dim); }
+.text-fire { color: var(--color-fire); }
+.text-ice { color: var(--color-ice); }
+.text-danger { color: var(--state-danger); }
+.text-safe { color: var(--state-safe); }
+
+/* ============================================
+   Pixel UI Component Primitives
+   ============================================ */
+.pixel-btn {
+  font-family: var(--font-pixel);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-bright);
+  background: var(--color-bg-elevated);
+  border: var(--border-normal);
+  padding: var(--space-md) var(--space-xl);
+  cursor: pointer;
+  box-shadow: var(--shadow-pixel-sm);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: all var(--transition-fast);
+  image-rendering: pixelated;
+}
+
+.pixel-btn:hover {
+  background: var(--color-bg-surface);
+  border-color: var(--color-primary);
+  color: var(--color-primary-bright);
+  box-shadow: var(--shadow-fire-sm);
+  transform: translate(-1px, -1px);
+}
+
+.pixel-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+
+.pixel-btn-primary {
+  background: var(--color-primary);
+  border-color: var(--color-primary-bright);
+  color: var(--color-text-bright);
+}
+
+.pixel-btn-primary:hover {
+  background: var(--color-primary-bright);
+  border-color: var(--color-primary-bright);
+}
+
+.pixel-btn-secondary {
+  background: var(--color-bg-elevated);
+  border-color: var(--color-secondary);
+  color: var(--color-secondary);
+}
+
+.pixel-btn-secondary:hover {
+  background: var(--color-secondary-bg);
+  color: var(--color-secondary-bright);
+  border-color: var(--color-secondary-bright);
+  box-shadow: 2px 2px 0px var(--color-secondary-dim);
+}
+
+.pixel-btn-sm {
+  font-size: var(--font-size-xs);
+  padding: var(--space-sm) var(--space-md);
+}
+
+.pixel-btn-lg {
+  font-size: var(--font-size-md);
+  padding: var(--space-lg) var(--space-2xl);
+}
+
+.pixel-panel {
+  background: var(--color-bg-elevated);
+  border: var(--border-normal);
+  box-shadow: var(--shadow-pixel-md);
+  padding: var(--space-xl);
+  image-rendering: pixelated;
+}
+
+.pixel-panel-bright {
+  border-color: var(--color-border-bright);
+}
+
+.pixel-panel-accent {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-fire-sm);
+}
+
+/* HP / Progress Bar */
+.pixel-bar {
+  height: 8px;
+  background: var(--color-bg-deep);
+  border: 1px solid var(--color-border);
+  image-rendering: pixelated;
+  overflow: hidden;
+}
+
+.pixel-bar-fill {
+  height: 100%;
+  background: var(--color-primary);
+  transition: width var(--transition-normal);
+}
+
+.pixel-bar-green .pixel-bar-fill { background: var(--hp-full); }
+.pixel-bar-yellow .pixel-bar-fill { background: var(--hp-mid); }
+.pixel-bar-red .pixel-bar-fill { background: var(--state-danger); }
+
+/* Material color badges */
+.mat-badge {
+  font-family: var(--font-pixel);
+  font-size: var(--font-size-xs);
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--color-border);
+  display: inline-block;
+  image-rendering: pixelated;
+}
+
+.mat-fire { color: var(--color-fire); border-color: var(--color-fire); background: rgba(232,67,10,0.15); }
+.mat-ice { color: var(--color-ice); border-color: var(--color-ice); background: rgba(7,232,208,0.12); }
+.mat-poison { color: var(--color-poison); border-color: var(--color-poison); background: rgba(122,232,48,0.12); }
+.mat-electric { color: var(--color-electric); border-color: var(--color-electric); background: rgba(232,224,7,0.12); }
+.mat-blood { color: var(--color-blood); border-color: var(--color-blood); background: rgba(232,7,48,0.15); }
+.mat-holy { color: var(--color-holy); border-color: var(--color-holy); background: rgba(240,232,176,0.12); }
+
+/* ============================================
+   Animation Keyframes (frame-step)
+   ============================================ */
+@keyframes pulse-fire {
+  0%, 100% { box-shadow: 0 0 4px var(--color-primary); }
+  50% { box-shadow: 0 0 12px var(--color-primary-bright); }
+}
+
+@keyframes pulse-ice {
+  0%, 100% { box-shadow: 0 0 4px var(--color-secondary); }
+  50% { box-shadow: 0 0 12px var(--color-secondary-bright); }
+}
+
+@keyframes blink {
+  0%, 60% { opacity: 1; }
+  70%, 90% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes slide-in-left {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes slide-in-right {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(-2px, 0); }
+  75% { transform: translate(2px, 0); }
+}
+
+@keyframes float-up {
+  from { transform: translateY(0); opacity: 1; }
+  to { transform: translateY(-20px); opacity: 0; }
+}
+
+/* Pixel border glow animation */
+@keyframes border-glow-fire {
+  0%, 100% { border-color: var(--color-primary); }
+  50% { border-color: var(--color-primary-bright); }
+}
+
+@keyframes border-glow-ice {
+  0%, 100% { border-color: var(--color-secondary); }
+  50% { border-color: var(--color-secondary-bright); }
+}
+
+    </style>
+    <style type="text/tailwindcss">
+@theme inline {
+  --color-primary: var(--color-primary);
+  --color-secondary: var(--color-secondary);
+}
+</style>
+    <style>
+@layer base {
+  body {
+    background-color: var(--color-bg-deep);
+    color: var(--color-text);
+    font-family: var(--font-pixel);
+    image-rendering: pixelated;
+    -webkit-font-smoothing: none;
+  }
+}
+</style>
+</head>
+<body>
+    <main class="game-viewport">
+
+      <!-- Pixel Particles Background -->
+      <div class="particles">
+        <span class="pixel-particle" style="left:10%;  bottom:-4px; animation-duration:12s; animation-delay:0s;"></span>
+        <span class="pixel-particle ice" style="left:25%;  bottom:-4px; animation-duration:15s; animation-delay:2s;"></span>
+        <span class="pixel-particle" style="left:40%;  bottom:-4px; animation-duration:10s; animation-delay:4s;"></span>
+        <span class="pixel-particle ice" style="left:55%;  bottom:-4px; animation-duration:14s; animation-delay:1s;"></span>
+        <span class="pixel-particle" style="left:70%;  bottom:-4px; animation-duration:11s; animation-delay:3s;"></span>
+        <span class="pixel-particle ice" style="left:85%;  bottom:-4px; animation-duration:13s; animation-delay:5s;"></span>
+        <span class="pixel-particle" style="left:15%;  bottom:-4px; animation-duration:16s; animation-delay:7s;"></span>
+        <span class="pixel-particle ice" style="left:60%;  bottom:-4px; animation-duration:9s;  animation-delay:6s;"></span>
+        <span class="pixel-particle" style="left:35%;  bottom:-4px; animation-duration:17s; animation-delay:8s;"></span>
+        <span class="pixel-particle ice" style="left:80%;  bottom:-4px; animation-duration:11s; animation-delay:9s;"></span>
+      </div>
+
+      <!-- Top: Game Title -->
+      <header style="margin-top:80px; text-align:center; z-index:var(--z-hud);">
+        <div class="title-container">
+          <h1 class="text-pixel text-3xl text-fire" style="text-shadow: var(--shadow-fire-md); line-height:var(--line-height-tight);">
+            NOITA ARENA
+          </h1>
+        </div>
+        <p class="text-pixel-cn text-lg text-ice" style="margin-top:var(--space-md); letter-spacing:4px;">
+          竞技场
+        </p>
+      </header>
+
+      <!-- Center: Mode Selection -->
+      <nav style="flex:1; display:flex; flex-direction:column; justify-content:center; gap:var(--space-2xl); z-index:var(--z-hud);">
+        <button class="pixel-btn pixel-btn-primary pixel-btn-lg menu-btn mode-btn" data-dom-id="cta-quick-match">
+          快速匹配
+        </button>
+        <button class="pixel-btn pixel-btn-lg menu-btn mode-btn" data-dom-id="cta-ranked">
+          排位赛
+        </button>
+        <button class="pixel-btn pixel-btn-lg menu-btn mode-btn" data-dom-id="cta-custom">
+          自建房
+        </button>
+      </nav>
+
+      <!-- Bottom: Toolbar + Avatar + Version -->
+      <footer style="width:100%; padding:var(--space-xl) var(--space-3xl); display:flex; justify-content:space-between; align-items:center; z-index:var(--z-hud);">
+        <div class="bottom-toolbar">
+          <button class="pixel-btn pixel-btn-sm" data-dom-id="nav-settings">
+            设置
+          </button>
+          <button class="pixel-btn pixel-btn-sm" data-dom-id="nav-help">
+            操作说明
+          </button>
+        </div>
+
+        <div class="player-avatar">
+          <span class="text-pixel text-xs text-fire">P1</span>
+        </div>
+
+        <span class="text-pixel text-xs text-dim">v0.1 ALPHA</span>
+      </footer>
+
+    </main>
+  <style>
+      /* === Page-specific: Main Menu === */
+
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+
+      body {
+        background: var(--color-bg-deep);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        overflow: hidden;
+      }
+
+      .game-viewport {
+        width: 100%;
+        max-width: 1280px;
+        height: 100vh;
+        max-height: 720px;
+        background: var(--color-bg-deep);
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        overflow: hidden;
+        image-rendering: pixelated;
+      }
+
+      /* Pixel particles background */
+      .particles {
+        position: absolute;
+        inset: 0;
+        z-index: var(--z-base);
+        overflow: hidden;
+        pointer-events: none;
+      }
+
+      .pixel-particle {
+        position: absolute;
+        width: 2px;
+        height: 2px;
+        background: var(--color-primary);
+        opacity: 0;
+        animation: particle-float linear infinite;
+      }
+
+      .pixel-particle.ice {
+        background: var(--color-secondary);
+      }
+
+      @keyframes particle-float {
+        0%   { transform: translateY(0) translateX(0); opacity: 0; }
+        10%  { opacity: 0.6; }
+        90%  { opacity: 0.6; }
+        100% { transform: translateY(-720px) translateX(20px); opacity: 0; }
+      }
+
+      /* Title pulse border */
+      .title-container {
+        animation: title-pulse 3s steps(6, end) infinite;
+        padding: var(--space-xl) var(--space-3xl);
+        border: 2px solid transparent;
+      }
+
+      @keyframes title-pulse {
+        0%, 100% { border-color: transparent; }
+        50%      { border-color: var(--color-primary); }
+      }
+
+      /* Menu button selected state */
+      .menu-btn[data-dom-id]:focus,
+      .menu-btn[data-dom-id].selected {
+        animation: border-glow-fire 1s steps(4, end) infinite;
+      }
+
+      /* Player avatar */
+      .player-avatar {
+        width: 36px;
+        height: 36px;
+        background: var(--color-bg-elevated);
+        border: 2px solid var(--color-primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        image-rendering: pixelated;
+        box-shadow: var(--shadow-pixel-sm);
+      }
+
+      /* Bottom toolbar */
+      .bottom-toolbar {
+        display: flex;
+        gap: var(--space-xl);
+        align-items: center;
+      }
+
+      /* Mode button wide */
+      .mode-btn {
+        min-width: 220px;
+        text-align: center;
+        display: block;
+      }
+    </style>
+</body>
+</html>

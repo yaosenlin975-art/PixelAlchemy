@@ -1,0 +1,1762 @@
+﻿using Cysharp.Threading.Tasks;
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using static Lin.Runtime.Helper.Vector3Extensions;
+using Random = UnityEngine.Random;
+
+namespace Lin.Runtime.Helper
+{
+    public static class TransformExtensions
+    {
+        public enum ETransformValueType
+        {
+            Position,
+            Rotation,
+            Scale
+        }
+
+        [Serializable]
+        public struct TransformValues
+        {
+            public SerializableVector3 position;
+            public SerializableVector3 euler;
+            public SerializableVector3 scale;
+
+            public static TransformValues Default => new TransformValues()
+            {
+                position = Vector3.zero,
+                euler = Vector3.zero,
+                scale = Vector3.one
+            };
+
+            public static TransformValues GetDefault() => new TransformValues
+            {
+                scale = Vector3.one
+            };
+
+            /// <summary>
+            /// 对于Vector3类型的比较xyz只保留三位小数（三位小数后四舍五入）相等时视为相等
+            /// </summary>
+            /// <returns>True:近似</returns>
+            private static bool ApproximatelyEqual(Vector3 a, Vector3 b)
+            {
+                return Mathf.Approximately(Mathf.Round(a.x * 1000f) / 1000f, Mathf.Round(b.x * 1000f) / 1000f) &&
+                       Mathf.Approximately(Mathf.Round(a.y * 1000f) / 1000f, Mathf.Round(b.y * 1000f) / 1000f) &&
+                       Mathf.Approximately(Mathf.Round(a.z * 1000f) / 1000f, Mathf.Round(b.z * 1000f) / 1000f);
+            }
+
+            public override bool Equals(object obj) => base.Equals(obj);
+
+            public override int GetHashCode() => base.GetHashCode();
+
+            public static bool operator ==(TransformValues a, TransformValues b) => ApproximatelyEqual(a.position, b.position) && ApproximatelyEqual(a.euler, b.euler) && ApproximatelyEqual(a.scale, b.scale);
+
+            public static bool operator !=(TransformValues a, TransformValues b) => !(a == b);
+
+            public static TransformValues operator -(TransformValues a, TransformValues b) => new TransformValues
+            {
+                position = a.position - b.position,
+                euler = Quaternion.Inverse(b.euler.ToVector3().ToQuaternion()) * a.euler,
+                scale = new Vector3(a.scale.x / b.scale.x, a.scale.y / b.scale.y, a.scale.z / b.scale.z)
+            };
+
+            public static TransformValues Lerp(TransformValues a, TransformValues b, float t)
+            {
+                return new TransformValues
+                {
+                    position = Vector3.Lerp(a.position, b.position, t),
+                    euler = Quaternion.Slerp(a.euler.ToVector3().ToQuaternion(), b.euler.ToVector3().ToQuaternion(), t).eulerAngles,
+                    scale = Vector3.Lerp(a.scale, b.scale, t)
+                };
+            }
+
+            public static TransformValues Slerp(TransformValues a, TransformValues b, float t)
+            {
+                return new TransformValues
+                {
+                    position = Vector3.Slerp(a.position, b.position, t),
+                    euler = Quaternion.Slerp(a.euler.ToVector3().ToQuaternion(), b.euler.ToVector3().ToQuaternion(), t).eulerAngles,
+                    scale = Vector3.Slerp(a.scale, b.scale, t)
+                };
+            }
+        }
+
+        public static Transform ResetValues(this Transform transform)
+        {
+            transform.localPosition = Vector3.zero;
+            transform.localRotation = Quaternion.identity;
+            transform.localScale = Vector3.one;
+            return transform;
+        }
+
+        #region LocalEulerAngle
+        public static Transform SetLocalEulerAngles(
+            this Transform transform,
+            float? x = null,
+            float? y = null,
+            float? z = null
+        )
+        {
+            var eulerAngles = transform.localEulerAngles;
+
+            if (x.HasValue)
+            {
+                eulerAngles.x = x.Value;
+            }
+
+            if (y.HasValue)
+            {
+                eulerAngles.y = y.Value;
+            }
+
+            if (z.HasValue)
+            {
+                eulerAngles.z = z.Value;
+            }
+
+            transform.localEulerAngles = eulerAngles;
+            return transform;
+        }
+
+        public static Transform AddLocalEulerAngles(
+            this Transform transform,
+            float? x = null,
+            float? y = null,
+            float? z = null
+        )
+        {
+            var eulerAngles = transform.localEulerAngles;
+
+            if (x.HasValue)
+            {
+                eulerAngles.x += x.Value;
+            }
+
+            if (y.HasValue)
+            {
+                eulerAngles.y += y.Value;
+            }
+
+            if (z.HasValue)
+            {
+                eulerAngles.z += z.Value;
+            }
+
+            transform.localEulerAngles = eulerAngles;
+            return transform;
+        }
+
+        public static Transform SubtractLocalEulerAngles(
+            this Transform transform,
+            float? x = null,
+            float? y = null,
+            float? z = null
+        )
+        {
+            var eulerAngles = transform.localEulerAngles;
+
+            if (x.HasValue)
+            {
+                eulerAngles.x -= x.Value;
+            }
+
+            if (y.HasValue)
+            {
+                eulerAngles.y -= y.Value;
+            }
+
+            if (z.HasValue)
+            {
+                eulerAngles.z -= z.Value;
+            }
+
+            transform.localEulerAngles = eulerAngles;
+            return transform;
+        }
+
+        public static Transform SetLocalEulerAngleX(this Transform transform, float x)
+        {
+            transform.localEulerAngles = transform.localEulerAngles.WithX(x);
+            return transform;
+        }
+
+        public static Transform SetLocalEulerAngleY(this Transform transform, float y)
+        {
+            transform.localEulerAngles = transform.localEulerAngles.WithY(y);
+            return transform;
+        }
+
+        public static Transform SetLocalEulerAngleZ(this Transform transform, float z)
+        {
+            transform.localEulerAngles = transform.localEulerAngles.WithZ(z);
+            return transform;
+        }
+
+        public static Transform AddLocalEulerAngleX(this Transform transform, float x)
+        {
+            transform.localEulerAngles = transform.localEulerAngles.WithAddX(x);
+            return transform;
+        }
+
+        public static Transform AddLocalEulerAngleY(this Transform transform, float y)
+        {
+            transform.localEulerAngles = transform.localEulerAngles.WithAddY(y);
+            return transform;
+        }
+
+        public static Transform AddLocalEulerAngleZ(this Transform transform, float z)
+        {
+            transform.localEulerAngles = transform.localEulerAngles.WithAddZ(z);
+            return transform;
+        }
+
+        public static Transform SubtractLocalEulerAngleX(this Transform transform, float x)
+        {
+            transform.localEulerAngles = transform.localEulerAngles.WithSubtractX(x);
+            return transform;
+        }
+
+        public static Transform SubtractLocalEulerAngleY(this Transform transform, float y)
+        {
+            transform.localEulerAngles = transform.localEulerAngles.WithSubtractY(y);
+            return transform;
+        }
+
+        public static Transform SubtractLocalEulerAngleZ(this Transform transform, float z)
+        {
+            transform.localEulerAngles = transform.localEulerAngles.WithSubtractZ(z);
+            return transform;
+        }
+        #endregion
+
+        #region EulerAngle
+        public static Transform SetEulerAngles(
+            this Transform transform,
+            float? x = null,
+            float? y = null,
+            float? z = null
+        )
+        {
+            var eulerAngles = transform.eulerAngles;
+
+            if (x.HasValue)
+            {
+                eulerAngles.x = x.Value;
+            }
+
+            if (y.HasValue)
+            {
+                eulerAngles.y = y.Value;
+            }
+
+            if (z.HasValue)
+            {
+                eulerAngles.z = z.Value;
+            }
+
+            transform.eulerAngles = eulerAngles;
+            return transform;
+        }
+
+        public static Transform AddEulerAngles(
+            this Transform transform,
+            float? x = null,
+            float? y = null,
+            float? z = null
+        )
+        {
+            var eulerAngles = transform.eulerAngles;
+
+            if (x.HasValue)
+            {
+                eulerAngles.x += x.Value;
+            }
+
+            if (y.HasValue)
+            {
+                eulerAngles.y += y.Value;
+            }
+
+            if (z.HasValue)
+            {
+                eulerAngles.z += z.Value;
+            }
+
+            transform.eulerAngles = eulerAngles;
+            return transform;
+        }
+
+        public static Transform SubtractEulerAngles(
+            this Transform transform,
+            float? x = null,
+            float? y = null,
+            float? z = null
+        )
+        {
+            var eulerAngles = transform.eulerAngles;
+
+            if (x.HasValue)
+            {
+                eulerAngles.x -= x.Value;
+            }
+
+            if (y.HasValue)
+            {
+                eulerAngles.y -= y.Value;
+            }
+
+            if (z.HasValue)
+            {
+                eulerAngles.z -= z.Value;
+            }
+
+            transform.eulerAngles = eulerAngles;
+            return transform;
+        }
+
+        public static Transform SetEulerAngleX(this Transform transform, float x)
+        {
+            transform.eulerAngles = transform.eulerAngles.WithX(x);
+            return transform;
+        }
+
+        public static Transform SetEulerAngleY(this Transform transform, float y)
+        {
+            transform.eulerAngles = transform.eulerAngles.WithY(y);
+            return transform;
+        }
+
+        public static Transform SetEulerAngleZ(this Transform transform, float z)
+        {
+            transform.eulerAngles = transform.eulerAngles.WithZ(z);
+            return transform;
+        }
+
+        public static Transform AddEulerAngleX(this Transform transform, float x)
+        {
+            transform.eulerAngles = transform.eulerAngles.WithAddX(x);
+            return transform;
+        }
+
+        public static Transform AddEulerAngleY(this Transform transform, float y)
+        {
+            transform.eulerAngles = transform.eulerAngles.WithAddY(y);
+            return transform;
+        }
+
+        public static Transform AddEulerAngleZ(this Transform transform, float z)
+        {
+            transform.eulerAngles = transform.eulerAngles.WithAddZ(z);
+            return transform;
+        }
+
+        public static Transform SubtractEulerAngleX(this Transform transform, float x)
+        {
+            transform.eulerAngles = transform.eulerAngles.WithSubtractX(x);
+            return transform;
+        }
+
+        public static Transform SubtractEulerAngleY(this Transform transform, float y)
+        {
+            transform.eulerAngles = transform.eulerAngles.WithSubtractY(y);
+            return transform;
+        }
+
+        public static Transform SubtractEulerAngleZ(this Transform transform, float z)
+        {
+            transform.eulerAngles = transform.eulerAngles.WithSubtractZ(z);
+            return transform;
+        }
+        #endregion
+
+        #region Position
+
+        public static Transform SetPosition(
+            this Transform transform,
+            float? x = null,
+            float? y = null,
+            float? z = null
+        )
+        {
+            var position = transform.position;
+
+            if (x.HasValue)
+            {
+                position.x = x.Value;
+            }
+
+            if (y.HasValue)
+            {
+                position.y = y.Value;
+            }
+
+            if (z.HasValue)
+            {
+                position.z = z.Value;
+            }
+
+            transform.position = position;
+            return transform;
+        }
+
+        public static Transform AddPosition(
+            this Transform transform,
+            float? x = null,
+            float? y = null,
+            float? z = null
+        )
+        {
+            var position = transform.position;
+
+            if (x.HasValue)
+            {
+                position.x += x.Value;
+            }
+
+            if (y.HasValue)
+            {
+                position.y += y.Value;
+            }
+
+            if (z.HasValue)
+            {
+                position.z += z.Value;
+            }
+
+            transform.position = position;
+            return transform;
+        }
+
+        public static Transform SubtractPosition(
+            this Transform transform,
+            float? x = null,
+            float? y = null,
+            float? z = null
+        )
+        {
+            var position = transform.position;
+
+            if (x.HasValue)
+            {
+                position.x -= x.Value;
+            }
+
+            if (y.HasValue)
+            {
+                position.y -= y.Value;
+            }
+
+            if (z.HasValue)
+            {
+                position.z -= z.Value;
+            }
+
+            transform.position = position;
+            return transform;
+        }
+
+        #region Set Position
+
+        public static Transform SetPositionX(this Transform transform, float x)
+        {
+            transform.position = transform.position.WithX(x);
+            return transform;
+        }
+
+        public static Transform SetPositionY(this Transform transform, float y)
+        {
+            transform.position = transform.position.WithY(y);
+            return transform;
+        }
+
+        public static Transform SetPositionZ(this Transform transform, float z)
+        {
+            transform.position = transform.position.WithZ(z);
+            return transform;
+        }
+
+        public static Transform SetPositionX(this Transform transform, Vector3 x)
+        {
+            transform.position = transform.position.WithX(x.x);
+            return transform;
+        }
+
+        public static Transform SetPositionY(this Transform transform, Vector3 y)
+        {
+            transform.position = transform.position.WithY(y.y);
+            return transform;
+        }
+
+        public static Transform SetPositionZ(this Transform transform, Vector3 z)
+        {
+            transform.position = transform.position.WithZ(z.z);
+            return transform;
+        }
+
+        public static Transform SetPositionX(this Transform transform, Transform x)
+        {
+            transform.position = transform.position.WithX(x.position.x);
+            return transform;
+        }
+
+        public static Transform SetPositionY(this Transform transform, Transform y)
+        {
+            transform.position = transform.position.WithY(y.position.y);
+            return transform;
+        }
+
+        public static Transform SetPositionZ(this Transform transform, Transform z)
+        {
+            transform.position = transform.position.WithZ(z.position.z);
+            return transform;
+        }
+
+        #endregion
+
+        #region Set Local Position
+
+        public static Transform SetLocalPositionX(this Transform transform, float x)
+        {
+            transform.localPosition = transform.localPosition.WithX(x);
+            return transform;
+        }
+
+        public static Transform SetLocalPositionY(this Transform transform, float y)
+        {
+            transform.localPosition = transform.localPosition.WithY(y);
+            return transform;
+        }
+
+        public static Transform SetLocalPositionZ(this Transform transform, float z)
+        {
+            transform.localPosition = transform.localPosition.WithZ(z);
+            return transform;
+        }
+
+        public static Transform SetLocalPositionX(this Transform transform, Vector3 x)
+        {
+            transform.localPosition = transform.localPosition.WithX(x.x);
+            return transform;
+        }
+
+        public static Transform SetLocalPositionY(this Transform transform, Vector3 y)
+        {
+            transform.localPosition = transform.localPosition.WithY(y.y);
+            return transform;
+        }
+
+        public static Transform SetLocalPositionZ(this Transform transform, Vector3 z)
+        {
+            transform.localPosition = transform.localPosition.WithZ(z.z);
+            return transform;
+        }
+
+        public static Transform SetLocalPositionX(this Transform transform, Transform x)
+        {
+            transform.localPosition = transform.localPosition.WithX(x.localPosition.x);
+            return transform;
+        }
+
+        public static Transform SetLocalPositionY(this Transform transform, Transform y)
+        {
+            transform.localPosition = transform.localPosition.WithY(y.localPosition.y);
+            return transform;
+        }
+
+        public static Transform SetLocalPositionZ(this Transform transform, Transform z)
+        {
+            transform.localPosition = transform.localPosition.WithZ(z.localPosition.z);
+            return transform;
+        }
+
+        #endregion
+
+        #region Set Euler Angles
+
+        public static Transform SetEulerAnglesX(this Transform transform, float x)
+        {
+            transform.eulerAngles = transform.eulerAngles.WithX(x);
+            return transform;
+        }
+
+        public static Transform SetEulerAnglesY(this Transform transform, float y)
+        {
+            transform.eulerAngles = transform.eulerAngles.WithY(y);
+            return transform;
+        }
+
+        public static Transform SetEulerAnglesZ(this Transform transform, float z)
+        {
+            transform.eulerAngles = transform.eulerAngles.WithZ(z);
+            return transform;
+        }
+
+        public static Transform SetEulerAnglesX(this Transform transform, Vector3 x)
+        {
+            transform.eulerAngles = transform.eulerAngles.WithX(x.x);
+            return transform;
+        }
+
+        public static Transform SetEulerAnglesY(this Transform transform, Vector3 y)
+        {
+            transform.eulerAngles = transform.eulerAngles.WithY(y.y);
+            return transform;
+        }
+
+        public static Transform SetEulerAnglesZ(this Transform transform, Vector3 z)
+        {
+            transform.eulerAngles = transform.eulerAngles.WithZ(z.z);
+            return transform;
+        }
+
+        public static Transform SetEulerAnglesX(this Transform transform, Transform x)
+        {
+            transform.eulerAngles = transform.eulerAngles.WithX(x.eulerAngles.x);
+            return transform;
+        }
+
+        public static Transform SetEulerAnglesY(this Transform transform, Transform y)
+        {
+            transform.eulerAngles = transform.eulerAngles.WithY(y.eulerAngles.y);
+            return transform;
+        }
+
+        public static Transform SetEulerAnglesZ(this Transform transform, Transform z)
+        {
+            transform.eulerAngles = transform.eulerAngles.WithZ(z.eulerAngles.z);
+            return transform;
+        }
+
+        #endregion
+
+        #region Set Local Euler Angles
+
+        public static Transform SetLocalEulerAnglesX(this Transform transform, float x)
+        {
+            transform.localEulerAngles = transform.localEulerAngles.WithX(x);
+            return transform;
+        }
+
+        public static Transform SetLocalEulerAnglesY(this Transform transform, float y)
+        {
+            transform.localEulerAngles = transform.localEulerAngles.WithY(y);
+            return transform;
+        }
+
+        public static Transform SetLocalEulerAnglesZ(this Transform transform, float z)
+        {
+            transform.localEulerAngles = transform.localEulerAngles.WithZ(z);
+            return transform;
+        }
+
+        public static Transform SetLocalEulerAnglesX(this Transform transform, Vector3 x)
+        {
+            transform.localEulerAngles = transform.localEulerAngles.WithX(x.x);
+            return transform;
+        }
+
+        public static Transform SetLocalEulerAnglesY(this Transform transform, Vector3 y)
+        {
+            transform.localEulerAngles = transform.localEulerAngles.WithY(y.y);
+            return transform;
+        }
+
+        public static Transform SetLocalEulerAnglesZ(this Transform transform, Vector3 z)
+        {
+            transform.localEulerAngles = transform.localEulerAngles.WithZ(z.z);
+            return transform;
+        }
+
+        public static Transform SetLocalEulerAnglesX(this Transform transform, Transform x)
+        {
+            transform.localEulerAngles = transform.localEulerAngles.WithX(x.localEulerAngles.x);
+            return transform;
+        }
+
+        public static Transform SetLocalEulerAnglesY(this Transform transform, Transform y)
+        {
+            transform.localEulerAngles = transform.localEulerAngles.WithY(y.localEulerAngles.y);
+            return transform;
+        }
+
+        public static Transform SetLocalEulerAnglesZ(this Transform transform, Transform z)
+        {
+            transform.localEulerAngles = transform.localEulerAngles.WithZ(z.localEulerAngles.z);
+            return transform;
+        }
+
+        #endregion
+
+        #region Set Local Scale
+
+        public static Transform SetLocalScale(this Transform self, Vector3 scale)
+        {
+            self.localScale = scale;
+            return self;
+        }
+
+        public static Transform SetLocalScale(this Transform transform, float scale)
+        {
+            transform.localScale = new Vector3(scale, scale, scale);
+            return transform;
+        }
+
+        public static Transform SetLocalScaleX(this Transform transform, float x)
+        {
+            transform.localScale = transform.localScale.WithX(x);
+            return transform;
+        }
+
+        public static Transform SetLocalScaleY(this Transform transform, float y)
+        {
+            transform.localScale = transform.localScale.WithY(y);
+            return transform;
+        }
+
+        public static Transform SetLocalScaleZ(this Transform transform, float z)
+        {
+            transform.localScale = transform.localScale.WithZ(z);
+            return transform;
+        }
+
+        public static Transform SetLocalScaleX(this Transform transform, Vector3 x)
+        {
+            transform.localScale = transform.localScale.WithX(x.x);
+            return transform;
+        }
+
+        public static Transform SetLocalScaleY(this Transform transform, Vector3 y)
+        {
+            transform.localScale = transform.localScale.WithY(y.y);
+            return transform;
+        }
+
+        public static Transform SetLocalScaleZ(this Transform transform, Vector3 z)
+        {
+            transform.localScale = transform.localScale.WithZ(z.z);
+            return transform;
+        }
+
+        public static Transform SetLocalScaleX(this Transform transform, Transform x)
+        {
+            transform.localScale = transform.localScale.WithX(x.localScale.x);
+            return transform;
+        }
+
+        public static Transform SetLocalScaleY(this Transform transform, Transform y)
+        {
+            transform.localScale = transform.localScale.WithY(y.localScale.y);
+            return transform;
+        }
+
+        public static Transform SetLocalScaleZ(this Transform transform, Transform z)
+        {
+            transform.localScale = transform.localScale.WithZ(z.localScale.z);
+            return transform;
+        }
+
+        public static Transform AddLocalScale(this Transform transform, Vector3 delta)
+        {
+            transform.localScale = transform.localScale + delta;
+            return transform;
+        }
+
+        public static Transform SubtractLocalScale(this Transform transform, Vector3 delta)
+        {
+            transform.localScale = transform.localScale - delta;
+            return transform;
+        }
+
+        public static Transform AddLocalScale(this Transform transform, float delta)
+        {
+            transform.localScale = transform.localScale + new Vector3(delta, delta, delta);
+            return transform;
+        }
+
+        public static Transform SubtractLocalScale(this Transform transform, float delta)
+        {
+            transform.localScale = transform.localScale - new Vector3(delta, delta, delta);
+            return transform;
+        }
+
+        public static Transform AddLocalScaleX(this Transform transform, float x)
+        {
+            transform.localScale = transform.localScale.WithAddX(x);
+            return transform;
+        }
+
+        public static Transform AddLocalScaleY(this Transform transform, float y)
+        {
+            transform.localScale = transform.localScale.WithAddY(y);
+            return transform;
+        }
+
+        public static Transform AddLocalScaleZ(this Transform transform, float z)
+        {
+            transform.localScale = transform.localScale.WithAddZ(z);
+            return transform;
+        }
+
+        public static Transform SubtractLocalScaleX(this Transform transform, float x)
+        {
+            transform.localScale = transform.localScale.WithSubtractX(x);
+            return transform;
+        }
+
+        public static Transform SubtractLocalScaleY(this Transform transform, float y)
+        {
+            transform.localScale = transform.localScale.WithSubtractY(y);
+            return transform;
+        }
+
+        public static Transform SubtractLocalScaleZ(this Transform transform, float z)
+        {
+            transform.localScale = transform.localScale.WithSubtractZ(z);
+            return transform;
+        }
+
+        #endregion
+
+        public static Transform AddPositionX(this Transform transform, float x)
+        {
+            transform.position = transform.position.WithAddX(x);
+            return transform;
+        }
+
+        public static Transform AddPositionY(this Transform transform, float y)
+        {
+            transform.position = transform.position.WithAddY(y);
+            return transform;
+        }
+
+        public static Transform AddPositionZ(this Transform transform, float z)
+        {
+            transform.position = transform.position.WithAddZ(z);
+            return transform;
+        }
+
+        public static Transform SubtractPositionX(this Transform transform, float x)
+        {
+            transform.position = transform.position.WithSubtractX(x);
+            return transform;
+        }
+
+        public static Transform SubtractPositionY(this Transform transform, float y)
+        {
+            transform.position = transform.position.WithSubtractY(y);
+            return transform;
+        }
+
+        public static Transform SubtractPositionZ(this Transform transform, float z)
+        {
+            transform.position = transform.position.WithSubtractZ(z);
+            return transform;
+        }
+
+        #endregion
+
+        #region LocalPosition
+        public static Transform SetLocalPosition(
+            this Transform transform,
+            float? x = null,
+            float? y = null,
+            float? z = null
+        )
+        {
+            var localPosition = transform.localPosition;
+
+            if (x.HasValue)
+            {
+                localPosition.x = x.Value;
+            }
+
+            if (y.HasValue)
+            {
+                localPosition.y = y.Value;
+            }
+
+            if (z.HasValue)
+            {
+                localPosition.z = z.Value;
+            }
+
+            transform.localPosition = localPosition;
+            return transform;
+        }
+
+        public static Transform AddLocalPosition(
+            this Transform transform,
+            float? x = null,
+            float? y = null,
+            float? z = null
+        )
+        {
+            var localPosition = transform.localPosition;
+
+            if (x.HasValue)
+            {
+                localPosition.x += x.Value;
+            }
+
+            if (y.HasValue)
+            {
+                localPosition.y += y.Value;
+            }
+
+            if (z.HasValue)
+            {
+                localPosition.z += z.Value;
+            }
+
+            transform.localPosition = localPosition;
+            return transform;
+        }
+
+        public static Transform SubtractLocalPosition(
+            this Transform transform,
+            float? x = null,
+            float? y = null,
+            float? z = null
+        )
+        {
+            var localPosition = transform.localPosition;
+
+            if (x.HasValue)
+            {
+                localPosition.x -= x.Value;
+            }
+
+            if (y.HasValue)
+            {
+                localPosition.y -= y.Value;
+            }
+
+            if (z.HasValue)
+            {
+                localPosition.z -= z.Value;
+            }
+
+            transform.localPosition = localPosition;
+            return transform;
+        }
+
+        public static Transform AddLocalPositionX(this Transform transform, float x)
+        {
+            transform.localPosition = transform.localPosition.WithAddX(x);
+            return transform;
+        }
+
+        public static Transform AddLocalPositionY(this Transform transform, float y)
+        {
+            transform.localPosition = transform.localPosition.WithAddY(y);
+            return transform;
+        }
+
+        public static Transform AddLocalPositionZ(this Transform transform, float z)
+        {
+            transform.localPosition = transform.localPosition.WithAddZ(z);
+            return transform;
+        }
+
+        public static Transform SubtractLocalPositionX(this Transform transform, float x)
+        {
+            transform.localPosition = transform.localPosition.WithSubtractX(x);
+            return transform;
+        }
+
+        public static Transform SubtractLocalPositionY(this Transform transform, float y)
+        {
+            transform.localPosition = transform.localPosition.WithSubtractY(y);
+            return transform;
+        }
+
+        public static Transform SubtractLocalPositionZ(this Transform transform, float z)
+        {
+            transform.localPosition = transform.localPosition.WithSubtractZ(z);
+            return transform;
+        }
+
+        #endregion
+
+        #region Scale
+
+        public static Transform SetScale(this Transform self, Vector3 scale) => self.SetScale(scale.x, scale.y, scale.z);
+
+        public static Transform SetScale(
+            this Transform transform,
+            float? x = null,
+            float? y = null,
+            float? z = null
+        )
+        {
+            var parent = transform.parent;
+            var parentScale = parent ? parent.lossyScale : Vector3.one;
+            var currentWorld = transform.lossyScale;
+            var targetWorld = new Vector3(x ?? currentWorld.x, y ?? currentWorld.y, z ?? currentWorld.z);
+            float ex = Mathf.Approximately(parentScale.x, 0f) ? 1f : parentScale.x;
+            float ey = Mathf.Approximately(parentScale.y, 0f) ? 1f : parentScale.y;
+            float ez = Mathf.Approximately(parentScale.z, 0f) ? 1f : parentScale.z;
+            transform.localScale = new Vector3(targetWorld.x / ex, targetWorld.y / ey, targetWorld.z / ez);
+            return transform;
+        }
+
+        public static Transform AddScale(
+            this Transform transform,
+            float? x = null,
+            float? y = null,
+            float? z = null
+        )
+        {
+            var parent = transform.parent;
+            var parentScale = parent ? parent.lossyScale : Vector3.one;
+            var currentWorld = transform.lossyScale;
+            var targetWorld = new Vector3(
+                x.HasValue ? currentWorld.x + x.Value : currentWorld.x,
+                y.HasValue ? currentWorld.y + y.Value : currentWorld.y,
+                z.HasValue ? currentWorld.z + z.Value : currentWorld.z
+            );
+            float ex = Mathf.Approximately(parentScale.x, 0f) ? 1f : parentScale.x;
+            float ey = Mathf.Approximately(parentScale.y, 0f) ? 1f : parentScale.y;
+            float ez = Mathf.Approximately(parentScale.z, 0f) ? 1f : parentScale.z;
+            transform.localScale = new Vector3(targetWorld.x / ex, targetWorld.y / ey, targetWorld.z / ez);
+            return transform;
+        }
+
+        public static Transform SubtractScale(
+            this Transform transform,
+            float? x = null,
+            float? y = null,
+            float? z = null
+        )
+        {
+            var parent = transform.parent;
+            var parentScale = parent ? parent.lossyScale : Vector3.one;
+            var currentWorld = transform.lossyScale;
+            var targetWorld = new Vector3(
+                x.HasValue ? currentWorld.x - x.Value : currentWorld.x,
+                y.HasValue ? currentWorld.y - y.Value : currentWorld.y,
+                z.HasValue ? currentWorld.z - z.Value : currentWorld.z
+            );
+            float ex = Mathf.Approximately(parentScale.x, 0f) ? 1f : parentScale.x;
+            float ey = Mathf.Approximately(parentScale.y, 0f) ? 1f : parentScale.y;
+            float ez = Mathf.Approximately(parentScale.z, 0f) ? 1f : parentScale.z;
+            transform.localScale = new Vector3(targetWorld.x / ex, targetWorld.y / ey, targetWorld.z / ez);
+            return transform;
+        }
+
+        public static Transform SetScale(this Transform transform, float UniformScaleValue) =>
+            transform.SetScale(UniformScaleValue, UniformScaleValue, UniformScaleValue);
+
+        public static Transform AddScale(this Transform transform, float UniformScaleValue) =>
+            transform.AddScale(UniformScaleValue, UniformScaleValue, UniformScaleValue);
+
+        public static Transform SubtractScale(this Transform transform, float UniformScaleValue) =>
+            transform.SubtractScale(UniformScaleValue, UniformScaleValue, UniformScaleValue);
+
+        public static Transform SetScaleX(this Transform transform, float x)
+        {
+            var parent = transform.parent;
+            var ex = parent ? parent.lossyScale.x : 1f;
+            if (Mathf.Approximately(ex, 0f)) ex = 1f;
+            transform.localScale = transform.localScale.WithX(x / ex);
+            return transform;
+        }
+
+        public static Transform SetScaleY(this Transform transform, float y)
+        {
+            var parent = transform.parent;
+            var ey = parent ? parent.lossyScale.y : 1f;
+            if (Mathf.Approximately(ey, 0f)) ey = 1f;
+            transform.localScale = transform.localScale.WithY(y / ey);
+            return transform;
+        }
+
+        public static Transform SetScaleZ(this Transform transform, float z)
+        {
+            var parent = transform.parent;
+            var ez = parent ? parent.lossyScale.z : 1f;
+            if (Mathf.Approximately(ez, 0f)) ez = 1f;
+            transform.localScale = transform.localScale.WithZ(z / ez);
+            return transform;
+        }
+
+        public static Transform AddScaleX(this Transform transform, float x)
+        {
+            var parent = transform.parent;
+            var ex = parent ? parent.lossyScale.x : 1f;
+            if (Mathf.Approximately(ex, 0f)) ex = 1f;
+            var target = transform.lossyScale.x + x;
+            transform.localScale = transform.localScale.WithX(target / ex);
+            return transform;
+        }
+
+        public static Transform AddScaleY(this Transform transform, float y)
+        {
+            var parent = transform.parent;
+            var ey = parent ? parent.lossyScale.y : 1f;
+            if (Mathf.Approximately(ey, 0f)) ey = 1f;
+            var target = transform.lossyScale.y + y;
+            transform.localScale = transform.localScale.WithY(target / ey);
+            return transform;
+        }
+
+        public static Transform AddScaleZ(this Transform transform, float z)
+        {
+            var parent = transform.parent;
+            var ez = parent ? parent.lossyScale.z : 1f;
+            if (Mathf.Approximately(ez, 0f)) ez = 1f;
+            var target = transform.lossyScale.z + z;
+            transform.localScale = transform.localScale.WithZ(target / ez);
+            return transform;
+        }
+
+        public static Transform SubtractScaleX(this Transform transform, float x)
+        {
+            var parent = transform.parent;
+            var ex = parent ? parent.lossyScale.x : 1f;
+            if (Mathf.Approximately(ex, 0f)) ex = 1f;
+            var target = transform.lossyScale.x - x;
+            transform.localScale = transform.localScale.WithX(target / ex);
+            return transform;
+        }
+
+        public static Transform SubtractScaleY(this Transform transform, float y)
+        {
+            var parent = transform.parent;
+            var ey = parent ? parent.lossyScale.y : 1f;
+            if (Mathf.Approximately(ey, 0f)) ey = 1f;
+            var target = transform.lossyScale.y - y;
+            transform.localScale = transform.localScale.WithY(target / ey);
+            return transform;
+        }
+
+        public static Transform SubtractScaleZ(this Transform transform, float z)
+        {
+            var parent = transform.parent;
+            var ez = parent ? parent.lossyScale.z : 1f;
+            if (Mathf.Approximately(ez, 0f)) ez = 1f;
+            var target = transform.lossyScale.z - z;
+            transform.localScale = transform.localScale.WithZ(target / ez);
+            return transform;
+        }
+
+        #endregion
+
+        #region Children
+
+        public static Transform DestroyChildren(this Transform transform)
+        {
+            foreach (Transform child in transform)
+                UnityEngine.Object.Destroy(child.gameObject);
+
+            return transform;
+        }
+
+        public static Transform DetachChildren(this Transform transform)
+        {
+            foreach (Transform child in transform)
+                child.SetParent(null);
+
+            return transform;
+        }
+
+        public static Transform GetRandomChild(this Transform transform) =>
+            transform.GetChild(Random.Range(0, transform.childCount));
+        #endregion
+
+        #region Distance
+
+        public static float Distance(this Transform transform, Transform target) =>
+            Vector3.Distance(transform.position, target.position);
+
+        public static float Distance(this Transform transform, Vector3 target) =>
+            Vector3.Distance(transform.position, target);
+
+        public static float DistanceWithoutHeight(this Transform transform, Transform target) =>
+            Vector3.Distance(transform.position.WithY(0), target.position.WithY(0));
+
+        public static float DistanceWithoutHeight(this Transform transform, Vector3 target) =>
+            Vector3.Distance(transform.position.WithY(0), target.WithY(0));
+
+        #endregion
+
+        #region Direction
+        public static Vector3 DirectionTo(this Transform source, Transform target) =>
+            (target.position - source.position).normalized;
+
+        public static Vector3 DirectionFrom(this Transform target, Transform source) =>
+            (source.position - target.position).normalized;
+
+        public static Vector3 DirectionToIgnoringHeight(this Transform source, Transform target) =>
+            (target.position.WithY(0) - source.position.WithY(0)).normalized;
+
+        public static Vector3 DirectionFromIgnoringHeight(
+            this Transform target,
+            Transform source
+        ) => (source.position.WithY(0) - target.position.WithY(0)).normalized;
+
+        public static Vector3 DirectionTo(this Transform source, Vector3 target) =>
+            (target - source.position).normalized;
+
+        public static Vector3 DirectionFrom(this Transform target, Vector3 source) =>
+            (source - target.position).normalized;
+
+        public static Vector3 DirectionToIgnoringHeight(this Transform source, Vector3 target) =>
+            (target.WithY(0) - source.position.WithY(0)).normalized;
+
+        public static Vector3 DirectionFromIgnoringHeight(this Transform target, Vector3 source) =>
+            (source.WithY(0) - target.position.WithY(0)).normalized;
+
+        public static Vector3 back(this Transform v) => -v.forward;
+
+        public static Vector3 left(this Transform v) => -v.right;
+
+        public static Vector3 down(this Transform v) => -v.up;
+
+        #endregion
+
+        #region Simple Movements
+
+        public static Transform MoveTowards(this Transform source, Transform target, float speed)
+        {
+            source.position = Vector3.MoveTowards(source.position, target.position, speed);
+            return source;
+        }
+
+        public static Transform MoveTowards(this Transform source, Vector3 target, float speed)
+        {
+            source.position = Vector3.MoveTowards(source.position, target, speed);
+            return source;
+        }
+
+        public static Transform ContinuesChaseTargetWhile(
+            this Transform agent,
+            Transform target,
+            MonoBehaviour monoBehaviour,
+            float speed = 5,
+            float? minDistanceKeep = null,
+            float? maxDistanceKeep = null,
+            float? delayBetweenSettingDestination = null,
+            Func<bool> loopCondition = null,
+            Func<float> distanceToPlayer = null
+        )
+        {
+            monoBehaviour.StartCoroutine(ChaseTargetCoroutine());
+
+            IEnumerator ChaseTargetCoroutine()
+            {
+                WaitForSeconds delay = new WaitForSeconds(delayBetweenSettingDestination ?? 0);
+                Vector3 selfPosition = agent.transform.position;
+
+                while (
+                    agent != null && target != null && loopCondition != null
+                        ? loopCondition()
+                        : true
+                )
+                {
+                    float distance =
+                        distanceToPlayer == null
+                            ? agent.transform.Distance(target)
+                            : distanceToPlayer();
+
+                    if (minDistanceKeep == null || maxDistanceKeep == null)
+                    {
+                        agent.MoveTowards(target.position, speed * Time.deltaTime);
+                    }
+                    else
+                    {
+                        if (distance < minDistanceKeep.Value)
+                        {
+                            Vector3 directionToMoveWhenTooCloseToPlayer = (
+                                target.position - selfPosition
+                            ).normalized;
+                            Vector3 positionToMove =
+                                selfPosition
+                                + (
+                                    directionToMoveWhenTooCloseToPlayer
+                                    * -1
+                                    * (maxDistanceKeep.Value - distance)
+                                );
+                            agent.MoveTowards(
+                                positionToMove.WithY(selfPosition.y),
+                                speed * Time.deltaTime
+                            );
+                        }
+                        else
+                        {
+                            agent.MoveTowards(target.position, speed * Time.deltaTime);
+                        }
+                    }
+
+                    if (delayBetweenSettingDestination == null)
+                        yield return null;
+                    else
+                        yield return delay;
+                }
+            }
+
+            return agent;
+        }
+
+        public static bool HasReachedDestination(
+            this Transform agent,
+            Transform destination,
+            float tolerence = 0.1f
+        ) => agent.Distance(destination) < tolerence;
+
+        public static bool HasReachedDestination(
+            this Transform agent,
+            Vector3 destination,
+            float tolerence = 0.1f
+        ) => agent.Distance(destination) < tolerence;
+
+        public static bool SetRandomDestination(
+            this Transform agent,
+            out Vector3 randomLocation,
+            float radius,
+            float speed,
+            Vector3? origin = null
+        )
+        {
+            Vector3 randomDirection = Random.insideUnitSphere * radius;
+            randomLocation = randomDirection += origin ?? agent.transform.position;
+            agent.MoveTowards(randomLocation, speed);
+            return true;
+        }
+
+        public static bool SetRandomDestination(
+            this Transform agent,
+            float radius,
+            float speed,
+            Vector3? origin = null
+        )
+        {
+            Vector3 randomDirection = Random.insideUnitSphere * radius;
+            Vector3 randomLocation = randomDirection += origin ?? agent.transform.position;
+            agent.MoveTowards(randomLocation, speed);
+            return true;
+        }
+
+        public static Transform Wander(
+            this Transform agent,
+            float radius,
+            MonoBehaviour monoBehaviour,
+            float speed,
+            bool isContinues = true,
+            float waitTime = 1,
+            Func<bool> condition = null,
+            bool useSameHeight = true
+        )
+        {
+            if (isContinues)
+                monoBehaviour.StartCoroutine(WanderCoroutine());
+            else
+                agent.SetRandomDestination(radius, speed * Time.deltaTime);
+
+            IEnumerator WanderCoroutine()
+            {
+                Vector3 randomLocation = Random.insideUnitSphere * radius;
+                if (useSameHeight)
+                    randomLocation.SetY(agent.position);
+                while (agent != null && condition != null ? condition() : true)
+                {
+                    if (agent.HasReachedDestination(randomLocation))
+                    {
+                        yield return new WaitForSeconds(waitTime);
+                        randomLocation = Random.insideUnitSphere * radius;
+                        if (useSameHeight)
+                            randomLocation.SetY(agent.position);
+                    }
+                    else
+                        agent.MoveTowards(randomLocation, 1);
+
+                    yield return null;
+                }
+            }
+
+            return agent;
+        }
+
+        public static Transform ContinuesFleeFromTargetWhile(
+            this Transform agent,
+            Transform target,
+            MonoBehaviour monoBehaviour,
+            float speed,
+            float fleeDistance = 10,
+            Func<bool> condition = null
+        )
+        {
+            if (agent == null || target == null)
+                return null;
+
+            monoBehaviour.StartCoroutine(FleeFromTargetCoroutine());
+
+            IEnumerator FleeFromTargetCoroutine()
+            {
+                while (agent != null && target != null && condition != null ? condition() : true)
+                {
+                    Vector3 fleeDirection = (agent.transform.position - target.position).normalized;
+                    Vector3 fleePosition = agent.transform.position + fleeDirection * fleeDistance;
+
+                    agent.MoveTowards(fleePosition, speed * Time.deltaTime);
+
+                    yield return null;
+                }
+            }
+
+            return agent;
+        }
+
+        public static Transform ContinuesPatrolWaypointsWhile(
+            this Transform agent,
+            List<Transform> waypoints,
+            float speed,
+            MonoBehaviour monoBehaviour,
+            bool followWaypointOrder = true,
+            Func<bool> condition = null
+        )
+        {
+            if (agent == null || waypoints == null || waypoints.Count == 0)
+                return null;
+            monoBehaviour.StartCoroutine(PatrolWaypointsCoroutine());
+
+            IEnumerator PatrolWaypointsCoroutine()
+            {
+                int currentWaypointIndex = 0;
+
+                while (agent != null && condition != null ? condition() : true)
+                {
+                    Transform currentWaypoint = waypoints[currentWaypointIndex];
+                    agent.MoveTowards(currentWaypoint.position, speed * Time.deltaTime);
+
+                    if (agent.HasReachedDestination(currentWaypoint))
+                    {
+                        currentWaypointIndex = followWaypointOrder
+                            ? (currentWaypointIndex + 1) % waypoints.Count
+                            : Random.Range(0, waypoints.Count);
+                    }
+
+                    yield return null;
+                }
+            }
+
+            return agent;
+        }
+
+        #endregion
+
+        #region LookAt
+
+        public static Transform LookAtIgnoringY(this Transform source, Transform target)
+        {
+            source.LookAt(target.position.WithPosY(source));
+            return source;
+        }
+
+        public static Transform LookAtIgnoringY(this Transform source, Vector3 target)
+        {
+            source.LookAt(target.WithPosY(source));
+            return source;
+        }
+
+        #endregion
+
+        #region Dot Product and Cross Product
+
+        public static float Dot(this Transform v, Transform target) =>
+            Vector3.Dot(v.forward, (target.position.WithY(0) - v.position.WithY(0)).normalized);
+
+        public static float Dot(this Transform v, Vector3 target) =>
+            Vector3.Dot(v.forward, (target.WithY(0) - v.position.WithY(0)).normalized);
+
+        public static Vector3 Cross(this Transform v, Transform target) =>
+            Vector3.Cross(v.forward, (target.position.WithY(0) - v.position.WithY(0)).normalized);
+
+        public static Vector3 Cross(this Transform v, Vector3 target) =>
+            Vector3.Cross(v.forward, (target.WithY(0) - v.position.WithY(0)).normalized);
+
+        #endregion
+
+        #region Position in world space and local space
+
+        public static Vector3 WorldSpacePositionToLocalSpace(
+            this Transform transform,
+            Vector3 position
+        )
+        {
+            Matrix4x4 worldToLocal = Matrix4x4
+                .TRS(transform.position, transform.rotation, Vector3.one)
+                .inverse;
+            return worldToLocal.MultiplyPoint3x4(position);
+        }
+
+        public static Vector3 LocalSpacePositionToWorldSpace(
+            this Transform transform,
+            Vector3 position
+        )
+        {
+            Matrix4x4 localToWorld = Matrix4x4.TRS(
+                transform.position,
+                transform.rotation,
+                Vector3.one
+            );
+            return localToWorld.MultiplyPoint3x4(position);
+        }
+
+        #endregion
+
+        #region GameObject
+        public static Transform Enable(this Transform transform)
+        {
+            transform.gameObject.SetActive(true);
+            return transform;
+        }
+
+        public static Transform Disable(this Transform transform)
+        {
+            transform.gameObject.SetActive(false);
+            return transform;
+        }
+
+        public static Transform EnableIfDisabled(this Transform transform)
+        {
+            if (!transform.gameObject.activeInHierarchy)
+                transform.gameObject.SetActive(true);
+            return transform;
+        }
+
+        public static Transform DisableIfEnabled(this Transform transform)
+        {
+            if (transform.gameObject.activeInHierarchy)
+                transform.gameObject.SetActive(false);
+            return transform;
+        }
+
+        public static Transform Toggle(this Transform transform)
+        {
+            transform.gameObject.SetActive(!transform.gameObject.activeInHierarchy);
+            return transform;
+        }
+        #endregion
+
+        #region Debugging
+        public static GameObject SpawnCubeAtLocation(
+            this Transform transform,
+            string nameArg = "Unnamed",
+            Color? color = null,
+            float? scale = null
+        )
+        {
+            GameObject newObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            newObject.name = nameArg;
+
+            newObject.transform.localScale = Vector3.one * (scale ?? 0.1f);
+            newObject.GetComponent<Collider>().enabled = false;
+            newObject.GetComponent<MeshRenderer>().material.color =
+                color ?? new Color(0.8f, 0.1f, 0.1f, 0.3f);
+            newObject.transform.position = transform.position;
+            return newObject;
+        }
+
+        public static GameObject CreateSphereAtLocation(
+            this Transform transform,
+            string nameArg = "Unnamed",
+            Color? color = null,
+            float? scale = null
+        )
+        {
+            GameObject newObject = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            newObject.name = nameArg;
+            newObject.transform.localScale = Vector3.one * (scale ?? 0.1f);
+            newObject.GetComponent<Collider>().enabled = false;
+            newObject.GetComponent<MeshRenderer>().material.color =
+                color ?? new Color(0.8f, 0.1f, 0.1f, 0.3f);
+            newObject.transform.position = transform.position;
+            return newObject;
+        }
+        #endregion
+
+        public static Transform SetWorld(this Transform self, TransformValues values)
+        {
+            self.SetPositionAndRotation(values.position, values.euler.ToVector3().ToQuaternion());
+            self.SetScale(values.scale);
+            return self;
+        }
+
+        public static Transform SetWorld(this Transform self, float[] values)
+        {
+            self.SetPositionAndRotation(Get(0), Get(3).ToQuaternion());
+            self.SetScale(Get(6));
+
+            Vector3 Get(int startIndex)
+            {
+                return new Vector3
+                {
+                    x = values[startIndex],
+                    y = values[startIndex + 1],
+                    z = values[startIndex + 2]
+                };
+            }
+            return self;
+        }
+
+        public static Transform SetLocal(this Transform self, TransformValues values)
+        {
+            self.SetLocalPositionAndRotation(values.position, values.euler.ToVector3().ToQuaternion());
+            self.SetLocalScale(values.scale);
+            return self;
+        }
+
+        public static Transform SetLocal(this Transform self, float[] values)
+        {
+            self.SetLocalPositionAndRotation(Get(0), Get(3).ToQuaternion());
+            self.SetLocalScale(Get(6));
+
+            Vector3 Get(int startIndex)
+            {
+                return new Vector3
+                {
+                    x = values[startIndex],
+                    y = values[startIndex + 1],
+                    z = values[startIndex + 2]
+                };
+            }
+            return self;
+        }
+
+        public static TransformValues WorldValues(this Transform self)
+        {
+            return new TransformValues
+            {
+                position = self.position,
+                euler = self.rotation.eulerAngles,
+                scale = self.lossyScale
+            };
+        }
+
+        public static float[] WorldFloats(this Transform self)
+        {
+            float[] result = new float[9];
+            Add(self.position, 0);
+            Add(self.rotation.eulerAngles, 3);
+            Add(self.lossyScale, 6);
+
+            void Add(Vector3 vector, int startIndex)
+            {
+                result[startIndex] = vector.x;
+                result[startIndex + 1] = vector.y;
+                result[startIndex + 2] = vector.z; 
+            }
+            return result;
+        }
+
+        public static float[] LocalFloats(this Transform self)
+        {
+            float[] result = new float[9];
+            Add(self.localPosition, 0);
+            Add(self.localRotation.eulerAngles, 3);
+            Add(self.localScale, 6);
+
+            void Add(Vector3 vector, int startIndex)
+            {
+                result[startIndex] = vector.x;
+                result[startIndex + 1] = vector.y;
+                result[startIndex + 2] = vector.z;
+            }
+            return result;
+        }
+
+        public static TransformValues LocalValues(this Transform self)
+        {
+            return new TransformValues
+            {
+                position = self.localPosition,
+                euler = self.localRotation.eulerAngles,
+                scale = self.localScale
+            };
+        }
+
+        public static void CopyFrom(this Transform self, Transform source)
+        {
+            self.SetPositionAndRotation(source.position, source.rotation);
+            self.SetScale(source.lossyScale);
+        }
+
+        public static void CopyTo(this Transform self, Transform target) => target.CopyFrom(self);
+
+        #region - Shake -
+
+        private struct ShakeConfig
+        {
+            public float interval;
+            public float shakeAmount;
+            public float duration;
+
+            public ShakeConfig(float interval, float shakeAmount, float duration)
+            {
+                this.interval = interval;
+                this.shakeAmount = shakeAmount;
+                this.duration = duration;
+            }
+
+            public static ShakeConfig operator +(ShakeConfig left, ShakeConfig right)
+            {
+                left.interval = Mathf.Min(left.interval, right.interval);
+                left.duration += right.duration / 2f;
+                left.shakeAmount = Mathf.Max(left.shakeAmount, right.shakeAmount);
+                return left;
+            }
+        }
+
+        private static Dictionary<Transform, ShakeConfig> shakeList = new Dictionary<Transform, ShakeConfig>();
+
+        public static async UniTask Square(this Transform self, float interval = 0.05f, float shakeAmount = 0.5f, float duration = 0.3f)
+        {
+            ShakeConfig config = new ShakeConfig(interval, shakeAmount, duration);
+            if (shakeList.ContainsKey(self))
+            {
+                shakeList[self] += config;
+                return;
+            }
+
+            shakeList.Add(self, config);
+            float startTime = Time.time;
+            var ori = self.localPosition;
+
+            while (Time.time - startTime < config.duration && self.gameObject.activeSelf)
+            {
+#if UNITY_2D
+                self.localPosition = ori + (Vector3)Random.insideUnitCircle * shakeAmount;
+#else
+                self.localPosition = ori + Random.insideUnitSphere * shakeAmount;
+#endif
+                await UniTask.Yield(PlayerLoopTiming.FixedUpdate);
+                self.localPosition = ori;
+                await UniTask.Yield(PlayerLoopTiming.FixedUpdate);
+                config = shakeList[self];
+            }
+
+            shakeList.Remove(self);
+        }
+
+        #endregion
+
+        public static T GetComponentInChildren<T>(this Transform self, string name) where T : Component
+        {
+            var child = self.Find(name);
+            if (child != null)
+                return child.GetComponent<T>();
+
+            foreach (Transform item in self)
+            {
+                var result = item.GetComponentInChildren<T>(name);
+                if (result != null) 
+                    return result;
+            }
+
+            return null;
+        }
+    }
+}

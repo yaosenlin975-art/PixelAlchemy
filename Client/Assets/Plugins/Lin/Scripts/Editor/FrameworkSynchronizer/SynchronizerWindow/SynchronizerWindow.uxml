@@ -1,0 +1,45 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="True">
+    <Style src="project://database/Assets/Plugins/Lin/Scripts/Editor/FrameworkSynchronizer/SynchronizerWindow/SynchronizerWindow.uss?fileID=7433441132597879392&amp;guid=97c3b3d5ea6a37f4b8838d358970b4a2&amp;type=3#SynchronizerWindow" />
+    <ui:VisualElement style="flex-grow: 1; border-left-width: 10px; border-right-width: 10px; border-top-width: 10px; border-bottom-width: 10px;">
+        <ui:VisualElement name="Pugins" style="flex-grow: 0; -unity-slice-top: 0; flex-shrink: 0;">
+            <ui:Label tabindex="-1" text="插件" parse-escape-sequences="true" display-tooltip-when-elided="true" style="-unity-font-style: bold; -unity-text-align: middle-left; border-top-width: 0; flex-direction: row; justify-content: flex-end;">
+                <ui:Button text="All" parse-escape-sequences="true" display-tooltip-when-elided="true" name="SelectAllButton" />
+            </ui:Label>
+            <ui:ListView name="PluginsViewer" style="min-height: 0; max-height: 150px;" />
+        </ui:VisualElement>
+        <ui:VisualElement name="ToolProjects" style="flex-grow: 0; border-top-width: 5px; flex-shrink: 0;">
+            <ui:Label tabindex="-1" text="工具项目" parse-escape-sequences="true" display-tooltip-when-elided="true" style="-unity-font-style: bold; flex-direction: row-reverse;">
+                <ui:Button text="All" parse-escape-sequences="true" display-tooltip-when-elided="true" name="SelectAllButton" />
+            </ui:Label>
+            <ui:ListView name="ToolProjectViewer" style="min-height: 0; max-height: 150px;" />
+        </ui:VisualElement>
+        <ui:VisualElement name="Other" style="flex-grow: 0; border-top-width: 5px;">
+            <ui:VisualElement name="Title" style="flex-grow: 1; flex-direction: row; justify-content: space-between;">
+                <ui:Label tabindex="-1" text="资源" parse-escape-sequences="true" display-tooltip-when-elided="true" style="-unity-font-style: bold; -unity-text-align: middle-left;" />
+                <ui:VisualElement style="flex-grow: 0; flex-direction: row;">
+                    <ui:Button parse-escape-sequences="true" display-tooltip-when-elided="true" name="AddExtraAssetButton" text="File" style="background-image: none; width: auto; height: auto; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px;" />
+                    <ui:Button parse-escape-sequences="true" display-tooltip-when-elided="true" name="AddExtraFolderButton" text="Folder" style="background-image: none; width: auto; height: auto;" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:ListView name="ExtraAssetsViewer" style="min-height: 0; max-height: 150px;" />
+        </ui:VisualElement>
+        <ui:VisualElement name="Ignore" style="flex-grow: 0; border-top-width: 5px;">
+            <ui:VisualElement name="Title" style="flex-grow: 1; flex-direction: row; justify-content: space-between;">
+                <ui:Label tabindex="-1" text="忽略" parse-escape-sequences="true" display-tooltip-when-elided="true" style="-unity-font-style: bold; -unity-text-align: middle-left;" />
+                <ui:VisualElement style="flex-grow: 0; flex-direction: row;">
+                    <ui:Button parse-escape-sequences="true" display-tooltip-when-elided="true" name="AddIgnoreAssetButton" text="File" style="background-image: none; width: auto; height: auto; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px;" />
+                    <ui:Button parse-escape-sequences="true" display-tooltip-when-elided="true" name="AddIgnoreFolderButton" text="Folder" style="background-image: none; width: auto; height: auto;" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:ListView name="IgnoreAssetsViewer" style="min-height: 0; max-height: 150px;" />
+        </ui:VisualElement>
+        <ui:VisualElement name="TargetProjects" style="flex-grow: 1; border-top-width: 5px; border-bottom-width: 10px; flex-shrink: 0;">
+            <ui:VisualElement name="Title" style="flex-grow: 0; flex-direction: row; justify-content: space-between; flex-shrink: 0;">
+                <ui:Label tabindex="-1" text="目标项目" parse-escape-sequences="true" display-tooltip-when-elided="true" style="-unity-font-style: bold; -unity-text-align: middle-left;" />
+                <ui:Button text="+" parse-escape-sequences="true" display-tooltip-when-elided="true" name="AddTargetProjectButton" />
+            </ui:VisualElement>
+            <ui:ListView name="TargetProjectsViewer" style="min-height: 0; max-height: 150px; border-left-width: 15px;" />
+        </ui:VisualElement>
+        <ui:Button text="同      步" parse-escape-sequences="true" display-tooltip-when-elided="true" name="SyncButton" style="height: 30px; -unity-font-style: bold;" />
+    </ui:VisualElement>
+</ui:UXML>

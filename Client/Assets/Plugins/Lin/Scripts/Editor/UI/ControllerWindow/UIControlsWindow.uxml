@@ -1,0 +1,7 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <ui:VisualElement name="Top" style="height: 20px; border-bottom-width: 1px; border-bottom-color: rgb(0, 0, 0); flex-direction: row-reverse;">
+        <ui:Button text="刷新" display-tooltip-when-elided="true" name="RefreshButton" style="font-size: 14px; -unity-font-style: normal;" />
+        <ui:TextField picking-mode="Ignore" name="SearchTextField" style="width: 70%; min-width: auto; flex-direction: row;" />
+    </ui:VisualElement>
+    <ui:VisualElement name="Buttom" />
+</ui:UXML>

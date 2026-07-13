@@ -1,0 +1,59 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 01676a745bd232e4ba244cf86bca2bf5, type: 3}
+  m_Name: "\u6280\u80FD\u7CFB\u7EDF\u7F16\u8F91\u5668"
+  m_EditorClassIdentifier: 
+  order: 0
+  title: "\u6280\u80FD\u7CFB\u7EDF\u7F16\u8F91\u5668"
+  tasks:
+  - title: "\u989D\u5916\u7269\u4F53\u8F68\u9053"
+    description: "1. \u63A7\u5236\u751F\u6210\u4F4D\u7F6E, \u671D\u5411, \u5927\u5C0F\n2.
+      \u63A7\u5236\u663E\u9690\n3. \u7ED3\u5408\u8D1D\u585E\u5C14\u66F2\u7EBF\u63A7\u5236\u7269\u4F53\u8FD0\u52A8\u8F68\u8FF9"
+    progress: 0
+    isEditing: 0
+    bulletPoints: []
+    references: []
+    useCustomTitleColor: 0
+    titleColor: {r: 0, g: 0, b: 0, a: 0}
+    useCustomBackgroundColor: 0
+    backgroundColor: {r: 0, g: 0, b: 0, a: 0}
+  - title: "\u78B0\u649E\u68C0\u6D4B\u8F68\u9053"
+    description: "\u63A7\u5236\u78B0\u649E\u68C0\u6D4B\u7684\u5927\u5C0F, \u5F62\u72B6,
+      \u4F4D\u7F6E, \u68C0\u6D4B\u65F6\u95F4"
+    progress: 0
+    isEditing: 0
+    bulletPoints: []
+    references: []
+    useCustomTitleColor: 0
+    titleColor: {r: 0, g: 0, b: 0, a: 0}
+    useCustomBackgroundColor: 0
+    backgroundColor: {r: 0, g: 0, b: 0, a: 0}
+  - title: "\u5F3A\u63A7\u6280\u80FD\u76EE\u6807\u52A8\u753B\u8F68\u9053"
+    description: 
+    progress: 0
+    isEditing: 1
+    bulletPoints: []
+    references: []
+    useCustomTitleColor: 0
+    titleColor: {r: 0, g: 0, b: 0, a: 0}
+    useCustomBackgroundColor: 0
+    backgroundColor: {r: 0, g: 0, b: 0, a: 0}
+  - title: "\u8D1D\u585E\u5C14\u66F2\u7EBF"
+    description: "\u63D0\u4F9B \u8DEF\u5F84, \u671D\u5411, \u5927\u5C0F \u7684\u53D8\u5316\u72B6\u6001\u66F2\u7EBF"
+    progress: 1
+    isEditing: 0
+    bulletPoints: []
+    references: []
+    useCustomTitleColor: 0
+    titleColor: {r: 0, g: 0, b: 0, a: 0}
+    useCustomBackgroundColor: 0
+    backgroundColor: {r: 0, g: 0, b: 0, a: 0}

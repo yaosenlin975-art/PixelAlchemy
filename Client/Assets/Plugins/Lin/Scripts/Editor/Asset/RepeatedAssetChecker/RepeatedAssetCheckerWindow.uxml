@@ -1,0 +1,9 @@
+<ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <Style src="project://database/Assets/Plugins/Lin/Scripts/Editor/Asset/RepeatedAssetChecker/RepeatedAssetCheckerWindow.uss?fileID=7433441132597879392&amp;guid=1b8b09328ed64614f89eb71d7a403cf8&amp;type=3#RepeatedAssetCheckerWindow" />
+    <ui:VisualElement name="Up" style="flex-grow: 1; height: 30px; max-height: 30px; min-height: 30px;">
+        <ui:Button text="刷新" name="RefreshListBtn" />
+    </ui:VisualElement>
+    <ui:VisualElement name="Down" style="flex-grow: 1;">
+        <ui:ScrollView name="AssetsViewer" />
+    </ui:VisualElement>
+</ui:UXML>

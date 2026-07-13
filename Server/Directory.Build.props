@@ -1,0 +1,11 @@
+<Project>
+  <!-- 统一 Server/ 下所有 .csproj 的编译参数与 NuGet 锁文件配置 -->
+  <!-- Unified build properties and NuGet lock file settings for all .csproj under Server/ -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <DisableImplicitNuGetFallbackFolder>true</DisableImplicitNuGetFallbackFolder>
+  </PropertyGroup>
+</Project>

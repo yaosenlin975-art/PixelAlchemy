@@ -1,0 +1,13 @@
+<ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="True">
+    <ui:VisualElement name="Container" style="flex-grow: 1; flex-direction: row; height: auto; min-height: auto; max-height: none; align-items: stretch; justify-content: space-between; margin-bottom: 3px;">
+        <ui:VisualElement style="flex-grow: 1; flex-direction: column; height: 30px; min-height: auto; min-width: 200px; max-width: 200px; justify-content: center;">
+            <ui:Label text="Label" name="PathLabel" style="font-size: 10px; -unity-font-style: italic; flex-grow: 0; height: auto; min-height: auto; max-height: none; margin-top: 0; margin-right: 0; margin-bottom: 0; margin-left: 10px; padding-top: 0; padding-right: 0; padding-bottom: 0; padding-left: 0; -unity-text-align: lower-left;" />
+        </ui:VisualElement>
+        <ui:VisualElement name="Buttons" style="flex-grow: 1; flex-direction: row-reverse; height: 30px; margin-top: 0; align-self: flex-start; margin-right: 0; margin-bottom: 0; margin-left: 0; width: 200px; min-width: 200px; max-width: 200px;">
+            <ui:Button text="删除" name="DeleteButton" tooltip="将这个资源完全删除" style="background-color: rgb(255, 0, 0); color: rgb(255, 255, 255); -unity-font-style: bold;" />
+            <ui:Button text="忽略" name="IgnoreAssetButton" tooltip="忽略这个资源" />
+            <ui:Button text="选中" name="SelectButton" />
+            <ui:Button text="被依赖" name="SelectDependentButton" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

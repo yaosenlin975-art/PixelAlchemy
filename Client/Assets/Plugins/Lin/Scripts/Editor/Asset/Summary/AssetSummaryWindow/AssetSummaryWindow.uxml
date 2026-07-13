@@ -1,0 +1,29 @@
+<ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="True">
+    <Style src="project://database/Assets/Plugins/Lin/Scripts/Editor/Asset/Summary/AssetSummaryWindow/AssetSummaryWindow.uss?fileID=7433441132597879392&amp;guid=bce14a1a448fed74ca4f607adcb5ea7f&amp;type=3#AssetSummaryWindow" />
+    <ui:VisualElement class="container">
+        <ui:Label text="文件注释" class="title" />
+        <uie:ObjectField label="目标" name="CurrentObjectField" />
+        <uie:ColorField label="颜色" value="#00FFFFFF" name="TitleColor" />
+        <ui:TextField label="标题" name="TitleField" />
+        <ui:Label text="说明" class="label" style="-unity-text-align: upper-left;" />
+        <ui:Label text="富文本语法说明" class="section-title" />
+        <ui:Box class="info-box" style="height: 100px; min-height: 100px; max-height: none;">
+            <ui:Label text="&lt;b&gt;文本&lt;/b&gt; - 粗体" enable-rich-text="false" class="info-text" style="-unity-font-style: bold;" />
+            <ui:Label text="&lt;i&gt;文本&lt;/i&gt; - 斜体" enable-rich-text="false" class="info-text" style="-unity-font-style: italic;" />
+            <ui:Label text="&lt;size=14&gt;文本&lt;/size&gt; - 字体大小" enable-rich-text="false" class="info-text" style="font-size: 14px;" />
+            <ui:Label text="&lt;color=#ff0000&gt;文本&lt;/color&gt; - 字体颜色" enable-rich-text="false" class="info-text" style="color: rgb(255, 0, 0);" />
+        </ui:Box>
+        <ui:TextField name="ToolTipField" multiline="true" class="note-field" style="height: 200px; align-self: stretch; align-items: stretch; flex-direction: row; justify-content: flex-start; min-height: 200px;" />
+        <ui:VisualElement class="button-row" style="justify-content: space-between; height: 20px; min-height: 20px; max-height: 20px; align-self: center; align-items: stretch; width: auto;">
+            <ui:Button text="保存" name="SaveButton" class="button" style="flex-grow: 1;" />
+            <ui:Button text="保存并关闭" name="SaveAndCloseBtn" class="button" style="flex-grow: 1;" />
+            <ui:Button text="取消" name="CancelButton" class="button" style="flex-grow: 1;" />
+            <ui:Button text="删除" name="DeleteButton" class="button" style="white-space: nowrap; -unity-text-align: middle-center; flex-grow: 1;" />
+        </ui:VisualElement>
+        <ui:Foldout text="注释效果预览" value="true" name="preview-foldout">
+            <ui:Box class="preview-box">
+                <ui:Label name="previewLabel" class="preview-text" />
+            </ui:Box>
+        </ui:Foldout>
+    </ui:VisualElement>
+</ui:UXML>

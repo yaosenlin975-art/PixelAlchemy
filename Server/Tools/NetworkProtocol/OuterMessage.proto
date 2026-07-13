@@ -1,0 +1,163 @@
+// ================================================================================
+// OuterMessage.proto
+// ================================================================================
+// 反向还原自 Server/Entity/Generate/NetworkProtocol/OuterMessage.cs。
+// 字段顺序、ProtoMember / MemoryPackOrder 编号与生成代码保持一致；
+// 重新生成时不会引入字段重排。
+//
+// 消息前的注释标注：OpCode、消息接口（IMessage / IRequest / IResponse）、
+// 序列化方式（protobuf / MemoryPack）。
+//
+// 与 OuterMessage.cs 的对应关系：
+//   [ProtoContract]      <=> Protocol = protobuf
+//   [MemoryPackable]     <=> Protocol = MemoryPack
+//   OpCode() 返回值       <=> OpCode
+//   IRequest/ResponseType <=> IRequest / IResponse
+//
+// 注：Fantasy 协议工具的具体 .proto 扩展 schema 未在 quickstart 文档中描述，
+// 此处按 protobuf 标准格式编写。运行 ProtocolExportTool 前请按工具约定补
+// option（namespace / opCode / protocol 等）或在 ExporterSettings 中映射。
+// ================================================================================
+
+syntax = "proto3";
+package Fantasy;
+
+// ----------------------------------------------------------------------------
+// C2G_TestMessage
+//   OpCode        : 134227731
+//   Interface     : AMessage, IMessage
+//   Protocol      : protobuf
+//   Field order   : Tag(1)
+// ----------------------------------------------------------------------------
+message C2G_TestMessage {
+    string Tag = 1;
+}
+
+// ----------------------------------------------------------------------------
+// C2G_TestRequest
+//   OpCode        : 268445457
+//   Interface     : AMessage, IRequest
+//   ResponseType  : G2C_TestResponse
+//   Protocol      : protobuf
+//   Field order   : Tag(1)
+// ----------------------------------------------------------------------------
+message C2G_TestRequest {
+    string Tag = 1;
+}
+
+// ----------------------------------------------------------------------------
+// G2C_TestResponse
+//   OpCode        : 402663185
+//   Interface     : AMessage, IResponse
+//   Protocol      : protobuf
+//   Field order   : ErrorCode(2), Tag(1)
+// ----------------------------------------------------------------------------
+message G2C_TestResponse {
+    uint32 ErrorCode = 2;
+    string Tag = 1;
+}
+
+// ----------------------------------------------------------------------------
+// C2G_Input
+//   OpCode        : 151004946
+//   Interface     : AMessage, IMessage
+//   Protocol      : MemoryPack
+//   Field order   : Frame(1), Payload(2)
+// ----------------------------------------------------------------------------
+message C2G_Input {
+    uint64 Frame = 1;
+    InputPayload Payload = 2;
+}
+
+// ----------------------------------------------------------------------------
+// InputPayload
+//   Interface     : AMessage, IDisposable
+//   Protocol      : MemoryPack
+//   Field order   : MoveX(1), MoveY(2), ActionFlags(3), AimAngle(4)
+//   Wire 体积     : 8 字节
+// ----------------------------------------------------------------------------
+message InputPayload {
+    int32 MoveX = 1;        // int16 in C#, encode as int32 in proto
+    int32 MoveY = 2;        // int16 in C#, encode as int32 in proto
+    uint32 ActionFlags = 3; // uint16 in C#, encode as uint32 in proto
+    int32 AimAngle = 4;     // int16 in C#, encode as int32 in proto
+}
+
+// ----------------------------------------------------------------------------
+// G2C_FrameBatch
+//   OpCode        : 151004948
+//   Interface     : AMessage, IMessage
+//   Protocol      : MemoryPack
+//   Field order   : Frame(1), Inputs(2)
+// ----------------------------------------------------------------------------
+message G2C_FrameBatch {
+    uint64 Frame = 1;
+    repeated PlayerInput Inputs = 2;
+}
+
+// ----------------------------------------------------------------------------
+// PlayerInput
+//   Interface     : AMessage, IDisposable
+//   Protocol      : MemoryPack
+//   Field order   : PlayerId(1), Payload(2)
+// ----------------------------------------------------------------------------
+message PlayerInput {
+    uint32 PlayerId = 1;
+    InputPayload Payload = 2;
+}
+
+// ----------------------------------------------------------------------------
+// G2C_SpectatorBatch
+//   OpCode        : 151004950
+//   Interface     : AMessage, IMessage
+//   Protocol      : MemoryPack
+//   Field order   : Frame(1), Inputs(2), SpectatorId(4)
+//   备注          : MemoryPackOrder 跳号（缺 3）需保持，避免破坏重放兼容
+// ----------------------------------------------------------------------------
+message G2C_SpectatorBatch {
+    uint64 Frame = 1;
+    repeated PlayerInput Inputs = 2;
+    uint32 SpectatorId = 4;
+}
+
+// ----------------------------------------------------------------------------
+// G2C_MatchSettle
+//   OpCode        : 134227733
+//   Interface     : AMessage, IMessage
+//   Protocol      : protobuf
+//   Field order   : MatchId(1), TotalFrames(2), Players(3), YourselfRank(4)
+// ----------------------------------------------------------------------------
+message G2C_MatchSettle {
+    uint32 MatchId = 1;
+    uint32 TotalFrames = 2;
+    repeated SettlePlayer Players = 3;
+    uint32 YourselfRank = 4;
+}
+
+// ----------------------------------------------------------------------------
+// SettlePlayer
+//   Interface     : AMessage, IDisposable
+//   Protocol      : protobuf
+//   Field order   : PlayerId(1), Rank(2), Kills(3), Deaths(4),
+//                   MaterialContribution(5), MmrDelta(6)
+// ----------------------------------------------------------------------------
+message SettlePlayer {
+    uint32 PlayerId = 1;
+    uint32 Rank = 2;
+    uint32 Kills = 3;
+    uint32 Deaths = 4;
+    uint32 MaterialContribution = 5;
+    int32 MmrDelta = 6;
+}
+
+// ----------------------------------------------------------------------------
+// C2G_DeviceReport
+//   OpCode        : 134227729
+//   Interface     : AMessage, IMessage
+//   Protocol      : protobuf
+//   Field order   : DeviceId(1), InstallId(2)
+// ----------------------------------------------------------------------------
+message C2G_DeviceReport {
+    string DeviceId = 1;
+    string InstallId = 2;
+}

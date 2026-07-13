@@ -1,0 +1,17 @@
+/*
+┌──────────────┐                                   
+│　类名: #SCRIPTNAME#
+│　功能说明: 
+└──────────────┘
+*/
+using Lin.Runtime.DesignPattern.Singleton;
+
+    #ROOTNAMESPACEBEGIN#
+public class #SCRIPTNAME# : Singleton<#SCRIPTNAME#>
+{
+    protected override void Init()
+    {
+
+    }
+}
+#ROOTNAMESPACEEND#

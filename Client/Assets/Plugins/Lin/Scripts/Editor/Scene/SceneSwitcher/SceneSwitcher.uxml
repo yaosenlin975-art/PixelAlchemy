@@ -1,0 +1,27 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="True">
+    <Style src="project://database/Assets/Plugins/Lin/Scripts/Editor/Scene/SceneSwitcher/SceneSwitcher.uss?fileID=7433441132597879392&amp;guid=648430f9c3ec33d4886e2c8286ecb3fa&amp;type=3#SceneSwitcher" />
+    <ui:VisualElement name="Root" style="flex-grow: 1; height: auto; align-self: auto; align-items: stretch;">
+        <ui:VisualElement name="BuildSettings" style="flex-grow: 0; height: auto; border-left-width: 5px; flex-shrink: 0; border-top-width: 5px; border-bottom-width: 10px;">
+            <ui:Label tabindex="-1" text="BuildSettings" parse-escape-sequences="true" display-tooltip-when-elided="true" style="-unity-font-style: bold;" />
+            <ui:ListView name="BuildSettingsListView" style="flex-grow: 1; min-height: auto; margin-left: 10px; max-height: 100px; height: auto; margin-right: 0;" />
+        </ui:VisualElement>
+        <ui:VisualElement name="YooAsset" style="flex-grow: 0; height: auto; border-left-width: 5px; flex-shrink: 0; border-bottom-width: 10px;">
+            <ui:Label tabindex="-1" text="YooAsset" parse-escape-sequences="true" display-tooltip-when-elided="true" style="-unity-font-style: bold;" />
+            <ui:ListView name="YooAssetListView" style="flex-grow: 0; margin-left: 10px; max-height: 100px; min-height: auto; height: auto;" />
+        </ui:VisualElement>
+        <ui:VisualElement name="Tool" style="flex-grow: 0; height: auto; border-left-width: 5px; flex-shrink: 0; border-bottom-width: 10px;">
+            <ui:Label tabindex="-1" text="Tool" parse-escape-sequences="true" display-tooltip-when-elided="true" style="-unity-font-style: bold; align-items: auto; flex-direction: row;">
+                <ui:Button text="+" parse-escape-sequences="true" display-tooltip-when-elided="true" name="CreateToolScene" style="flex-shrink: 0; flex-grow: 0; align-items: auto; height: 20px; margin-left: 60px; font-size: 10px; -unity-font-style: bold; padding-top: -5px; padding-right: 0; padding-bottom: 0; padding-left: 0; margin-top: 0; margin-right: 0; margin-bottom: 0; width: 20px; position: relative; top: -2px;" />
+            </ui:Label>
+            <ui:ListView name="ToolListView" style="flex-grow: 1; margin-left: 10px; max-height: 100px; min-height: auto; height: auto;" />
+        </ui:VisualElement>
+        <ui:VisualElement name="Other" style="flex-grow: 0; height: auto; border-left-width: 5px; flex-shrink: 0; border-bottom-width: 10px;">
+            <ui:Label tabindex="-1" text="Other" parse-escape-sequences="true" display-tooltip-when-elided="true" name="Label" style="-unity-font-style: bold; align-items: auto; flex-direction: row;" />
+            <ui:ListView name="OtherListView" horizontal-scrolling="false" style="flex-grow: 1; margin-left: 10px; max-height: 100px; min-height: auto; height: auto;" />
+        </ui:VisualElement>
+        <ui:TextField picking-mode="Ignore" label="搜索" name="SearchField" style="height: 20px; margin-top: 2px; -unity-font-style: bold;" />
+        <ui:ListView name="SearchListView" horizontal-scrolling="false" style="flex-grow: 1; margin-left: 10px; max-height: 100px; min-height: auto; height: auto; margin-bottom: 10px;" />
+        <ui:Button text="刷新" parse-escape-sequences="true" display-tooltip-when-elided="true" name="RefreshButton" style="height: 20px; width: 100%; flex-grow: 0; border-right-width: 6px;" />
+        <ui:VisualElement name="LastScene" style="flex-grow: 1;" />
+    </ui:VisualElement>
+</ui:UXML>

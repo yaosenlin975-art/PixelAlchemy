@@ -38,11 +38,14 @@ namespace Fantasy
             
             if (processMode == ProcessMode.Release)
             {
+                // Release 模式仅移除 Trace/Debug/Info/Warn 的控制台规则，
+                // 保留 ConsoleError，确保错误日志在发布环境仍输出到控制台。
+                // In Release mode, only remove console rules for Trace/Debug/Info/Warn.
+                // ConsoleError is retained so errors still appear on the console in production.
                 LogManager.Configuration.RemoveRuleByName("ConsoleTrace");
                 LogManager.Configuration.RemoveRuleByName("ConsoleDebug");
                 LogManager.Configuration.RemoveRuleByName("ConsoleInfo");
                 LogManager.Configuration.RemoveRuleByName("ConsoleWarn");
-                LogManager.Configuration.RemoveRuleByName("ConsoleError");
             }
             
             LogManager.ReconfigExistingLoggers();

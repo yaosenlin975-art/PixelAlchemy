@@ -1,0 +1,17 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <Style src="project://database/Assets/Plugins/Lin/Scripts/Editor/FrameworkSynchronizer/AssetsTreeWindow/AssetsTreeWindow.uss?fileID=7433441132597879392&amp;guid=843d3ea0039a71f408bf3cc5483fab6a&amp;type=3#AssetsTreeWindow" />
+    <ui:VisualElement name="Top" style="flex-grow: 1; height: 30px; min-height: 30px; max-height: 30px; flex-direction: row;">
+        <ui:Label tabindex="-1" text="gwagwag" parse-escape-sequences="true" display-tooltip-when-elided="true" name="ProjectName" style="-unity-font-style: bold; flex-grow: 1; -unity-text-align: middle-left;" />
+        <ui:VisualElement name="SelectButtons" style="flex-grow: 0; height: auto; width: 120px; flex-direction: row-reverse; align-self: stretch; justify-content: flex-start; align-items: center;">
+            <ui:Button text="None" parse-escape-sequences="true" display-tooltip-when-elided="true" name="NoneButton" style="width: 50px; min-width: 50px; max-width: 50px;" />
+            <ui:Button text="All" parse-escape-sequences="true" display-tooltip-when-elided="true" name="AllButton" style="width: 50px; min-width: 50px; max-width: 50px;" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+    <ui:VisualElement name="Middle" style="flex-grow: 1; flex-shrink: 0;">
+        <ui:TreeView name="AssetTreeViewer" style="flex-grow: 0; max-height: 400px; min-height: 400px;" />
+    </ui:VisualElement>
+    <ui:VisualElement name="Buttom" style="flex-grow: 1; height: 30px; min-height: 30px; max-height: 30px; flex-direction: row; justify-content: space-between;">
+        <ui:Toggle label="只显示变化" name="ChangeOnlyToggle" style="width: auto; -unity-text-align: middle-left;" />
+        <ui:Button text="Copy" parse-escape-sequences="true" display-tooltip-when-elided="true" name="CopyButton" />
+    </ui:VisualElement>
+</ui:UXML>

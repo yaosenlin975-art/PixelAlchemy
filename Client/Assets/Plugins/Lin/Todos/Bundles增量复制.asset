@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:yousandi.cn,2023:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 01676a745bd232e4ba244cf86bca2bf5, type: 3}
+  m_Name: "Bundles\u589E\u91CF\u590D\u5236"
+  m_EditorClassIdentifier: 
+  order: 4
+  title: "Bundles\u589E\u91CF\u590D\u5236"
+  tasks:
+  - title: "\u9009\u62E9\u7F13\u5B58\u7684\u7248\u672C\u53F7"
+    description: "\u5728\u6253\u5305\u8BBE\u7F6E\u4E2D\u9009\u62E9\u7F13\u5B58\u7684\u7248\u672C\u4FE1\u606F,
+      \u9ED8\u8BA4\u9009\u62E9\u6700\u540E\u4E00\u6B21\u6253\u5305\u8F93\u51FA\u7684\u7248\u672C"
+    progress: 0
+    isEditing: 0
+    bulletPoints: []
+    references: []
+    useCustomTitleColor: 0
+    titleColor: {r: 0, g: 0, b: 0, a: 0}
+    useCustomBackgroundColor: 0
+    backgroundColor: {r: 0, g: 0, b: 0, a: 0}
+  - title: "\u5BF9\u6BD4\u8F93\u51FA\u589E\u91CF"
+    description: "\u5C06\u73B0\u8F93\u51FA\u6587\u4EF6\u5217\u8868\u4E0E\u9009\u62E9\u7684\u7F13\u5B58\u4FE1\u606F\u8FDB\u884C\u5BF9\u6BD4,
+      \u628A\u589E\u91CF\u6587\u4EF6\u6309\u539F\u6587\u4EF6\u8DEF\u5F84\u590D\u5236\u5230\u589E\u91CF\u6587\u4EF6\u5939\u4E2D,
+      \u6700\u540E\u5C06\u672C\u6B21\u6253\u5305\u7684\u4FE1\u606F\u8FDB\u884C\u7F13\u5B58"
+    progress: 0
+    isEditing: 0
+    bulletPoints: []
+    references: []
+    useCustomTitleColor: 0
+    titleColor: {r: 0, g: 0, b: 0, a: 0}
+    useCustomBackgroundColor: 0
+    backgroundColor: {r: 0, g: 0, b: 0, a: 0}

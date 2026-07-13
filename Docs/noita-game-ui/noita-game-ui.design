@@ -1,0 +1,177 @@
+{
+  "data": [
+    {
+      "id": "page-main-menu",
+      "title": "主菜单",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1752019200000,
+      "canvasData": {
+        "x": 620,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/main-menu.html",
+        "interactions": [
+          {
+            "domId": "cta-quick-match",
+            "targetPageId": "page-hud-pc",
+            "transitionLabel": "开始对局"
+          },
+          {
+            "domId": "cta-ranked",
+            "targetPageId": "page-hud-pc",
+            "transitionLabel": "排位赛"
+          },
+          {
+            "domId": "cta-custom",
+            "targetPageId": "page-hud-pc",
+            "transitionLabel": "自建房"
+          },
+          {
+            "domId": "nav-settings",
+            "targetPageId": "page-settings",
+            "hideEdge": true,
+            "transitionLabel": "打开设置"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-hud-pc",
+      "title": "对局HUD - PC端",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1752019200000,
+      "canvasData": {
+        "x": 1240,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/hud-pc.html",
+        "interactions": [
+          {
+            "domId": "cta-pause",
+            "targetPageId": "page-pause",
+            "transitionLabel": "暂停"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-hud-mobile",
+      "title": "对局HUD - 移动端",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1752019200000,
+      "canvasData": {
+        "x": 1240,
+        "y": 377,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/hud-mobile.html",
+        "interactions": [
+          {
+            "domId": "cta-pause",
+            "targetPageId": "page-pause",
+            "transitionLabel": "暂停"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-result",
+      "title": "结算界面",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1752019200000,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/result.html",
+        "interactions": [
+          {
+            "domId": "cta-hud-pc",
+            "targetPageId": "page-hud-pc",
+            "transitionLabel": "再来一局"
+          },
+          {
+            "domId": "nav-main-menu",
+            "targetPageId": "page-main-menu",
+            "transitionLabel": "返回大厅"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-pause",
+      "title": "暂停菜单",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1752019200000,
+      "canvasData": {
+        "x": 1860,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/pause.html",
+        "interactions": [
+          {
+            "domId": "back-hud-pc",
+            "targetPageId": "page-hud-pc",
+            "hideEdge": true,
+            "transitionLabel": "继续游戏"
+          },
+          {
+            "domId": "nav-settings",
+            "targetPageId": "page-settings",
+            "hideEdge": true,
+            "transitionLabel": "打开设置"
+          },
+          {
+            "domId": "nav-main-menu",
+            "targetPageId": "page-main-menu",
+            "hideEdge": true,
+            "transitionLabel": "退出对局"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-settings",
+      "title": "设置",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1752019200000,
+      "canvasData": {
+        "x": 0,
+        "y": 754,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/settings.html",
+        "interactions": [
+          {
+            "domId": "back-main-menu",
+            "targetPageId": "page-main-menu",
+            "hideEdge": true,
+            "transitionLabel": "返回主菜单"
+          }
+        ]
+      }
+    }
+  ],
+  "config": {
+    "autoLayout": true,
+    "deviceType": "desktop",
+    "projectName": "Noita 竞技场 UI",
+    "designLibrary": null
+  }
+}

@@ -1,0 +1,8 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <ui:VisualElement name="SceneButton" style="flex-grow: 0; flex-shrink: 0; height: 20px; flex-direction: row; width: 580px;">
+        <ui:Button text="进入" parse-escape-sequences="true" display-tooltip-when-elided="true" name="SwitchButton" style="flex-grow: 0; height: auto; margin-top: 0; margin-right: 0; margin-bottom: 0; margin-left: 0;" />
+        <ui:Button text="选择" parse-escape-sequences="true" display-tooltip-when-elided="true" name="SelectButton" style="flex-grow: 0; height: auto; margin-top: 0; margin-right: 0; margin-bottom: 0; margin-left: 5px;" />
+        <ui:Label tabindex="-1" text="Label" parse-escape-sequences="true" display-tooltip-when-elided="true" name="SceneName" style="flex-grow: 0; -unity-text-align: middle-left; border-left-width: 10px; -unity-font-style: bold; width: 100px;" />
+        <ui:Label tabindex="-1" text="Label" parse-escape-sequences="true" display-tooltip-when-elided="true" name="ScenePath" style="flex-grow: 0; -unity-text-align: middle-right; border-left-width: 10px; font-size: 10px; -unity-font-style: italic; width: 350px;" />
+    </ui:VisualElement>
+</ui:UXML>

@@ -1,0 +1,6 @@
+{
+    "InputDir": "d:/Unity/Projects/Noita/Server/Tools/NetworkProtocol/",
+    "ServerOutputDir": "d:/Unity/Projects/Noita/Server/Entity/Generate/NetworkProtocol/",
+    "ClientOutputDir": "d:/Unity/Projects/Noita/Client/Assets/Scripts/Hotfix/Generate/NetworkProtocol/",
+    "Namespace": "Fantasy"
+}

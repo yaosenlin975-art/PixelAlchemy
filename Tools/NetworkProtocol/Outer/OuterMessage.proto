@@ -13,7 +13,9 @@ package Fantasy.Network.Message;
 // 通过添加 // using 导出时添加自定义命名空间
 // 例如: // using System.Runtime // using System.Reflection
 
-
+// ============================================================
+// 既有占位消息（保留，勿删）
+// ============================================================
 message C2G_TestMessage // IMessage
 {
 	string Tag = 1;
@@ -25,4 +27,108 @@ message C2G_TestRequest // IRequest,G2C_TestResponse
 message G2C_TestResponse // IResponse
 {
 	string Tag = 1;
+}
+
+// ============================================================
+// 帧同步热路径（MemoryPack 30Hz）
+// 以下消息运行时仅走 MemoryPack 序列化，不进 protobuf 编码
+// （见 协议与序列化规范.md §3.2 / §6）
+// 子消息 InputPayload / PlayerInput 不单独标注 // Protocol，
+// 由引用它们的 MemoryPack 顶层消息推导序列化类型。
+// ============================================================
+
+// Protocol MemoryPack
+// 高频 30Hz，逐帧确定性输入；C→S
+message C2G_Input // IMessage
+{
+    uint64 Frame = 1;          // 客户端帧号
+    InputPayload Payload = 2;  // 输入载荷（8 字节，见 InputPayload）
+}
+
+// Protocol MemoryPack
+// 确定性输入载荷（8 字节）：MoveX/Y int16 + ActionFlags uint16 + AimAngle int16
+// 无 SpellId（A4 结论，ProtocolVersion 1→2）；bit2/3 与 bit10-15 保留禁用（A5）
+// 必须显式标注 MemoryPack：工具不会从父消息推导子消息序列化类型，否则会默认生成 ProtoBuf 而破坏 MemoryPack 嵌套。
+message InputPayload
+{
+    int16  MoveX = 1;          // [-100, 100] 归一化向量 ×100
+    int16  MoveY = 2;          // [-100, 100] 归一化向量 ×100
+    uint16 ActionFlags = 3;    // 位标志（§5：bit0 Jump,bit1 Attack,bit4-9 使用,bit2/3+bit10-15 保留禁用）
+    int16  AimAngle = 4;       // [0, 628] ×100 表示 [0, 2π)
+}
+
+// Protocol MemoryPack
+// 高频 30Hz，聚合所有玩家输入；S→C
+message G2C_FrameBatch // IMessage
+{
+    uint64 Frame = 1;                  // 服务器帧号
+    repeated PlayerInput Inputs = 2;   // 所有玩家输入
+}
+
+// Protocol MemoryPack
+// 单玩家输入：被 G2C_FrameBatch / G2C_SpectatorBatch 复用
+message PlayerInput
+{
+    uint32 PlayerId = 1;
+    InputPayload Payload = 2;
+}
+
+// Protocol MemoryPack
+// 观战延迟帧批次；S→C
+message G2C_SpectatorBatch // IMessage
+{
+    uint64 Frame = 1;
+    repeated PlayerInput Inputs = 2;
+    // DelayedEvents 引用 G2C_SceneEvent（Route 消息，见 协议与序列化规范.md §3.1）。
+    // 其完整 schema + RouteType.Config 注册尚未落地（观战模式，后 MVP），暂注释以免导出期
+    // 出现未定义类型导致生成失败。启用观战时再补：
+    //   repeated G2C_SceneEvent DelayedEvents = 3;
+    uint32 SpectatorId = 4;
+}
+
+// ============================================================
+// 赛后结算下行（ProtoBuf 低频一次性）
+// 见 协议与序列化规范.md §6.1：
+// 不进 30Hz 输入流，不 bump ProtocolVersion（与 C2G_MatchResult 同档）。
+// Rank/Kills/Deaths/MaterialContribution 为确定性量，客户端本地派生；
+// 仅 MmrDelta 由服务端权威下发。DisplayName 按 PlayerId 查房间名册；
+// IsWinner/IsDraw 由 Rank 与 Players[] 推导；MatchDurationMs = TotalFrames/30*1000。
+// ============================================================
+
+// Protocol ProtoBuf
+// 低频一次性，赛后结算下行
+message G2C_MatchSettle // IMessage
+{
+    uint32 MatchId = 1;                // 对局 ID
+    uint32 TotalFrames = 2;            // 本局总逻辑帧
+    repeated SettlePlayer Players = 3; // 按 Rank 升序（1 = 冠军在前）
+    uint32 YourselfRank = 4;           // 本地玩家名次（客户端已知 PlayerId，可派生；服务端给更省事）
+}
+
+// 单玩家结算项：被 G2C_MatchSettle 复用（ProtoBuf，由父消息推导）
+message SettlePlayer
+{
+    uint32 PlayerId = 1;
+    uint32 Rank = 2;                   // 名次（1 = 冠军）
+    uint32 Kills = 3;                  // K
+    uint32 Deaths = 4;                 // D（0 或 1）
+    uint32 MaterialContribution = 5;   // 材料改造贡献（= 结算界面规格 v1.1 §3.3 MaterialModifiedPixels）
+    int32  MmrDelta = 6;               // MMR 变化（排位，ELO 变体 K=32；非确定性，服务端算）
+}
+
+// ============================================================
+// 连接级设备标识上报（ProtoBuf 低频一次性）
+// 见 dataanalyst 埋点约束 #4：需要稳定匿名玩家 ID；局内 PlayerId 跨对局不稳定，无法满足。
+// 客户端在连接/重连时一次性上报哈希后的匿名设备标识，不进 30Hz 输入流，
+// 不 bump ProtocolVersion（帧同步 MemoryPack schema 未变，纯追加式独立通道，向后兼容）。
+// 注：完整的连接/版本校验消息 C2G_ClientVersionReport（§3.1）随连接层建设另立；
+//     此处先补设备标识缺口，避免阻塞服务端埋点管线（task #32，E1–E9 稳定 ID 绑定）。
+// ============================================================
+
+// Protocol ProtoBuf
+// 连接/重连时一次性上报：稳定匿名设备标识
+message C2G_DeviceReport // IMessage
+{
+    string DeviceId = 1;   // 哈希后的稳定匿名设备 ID（重装不变；用于跨对局稳定追踪）
+    string InstallId = 2;  // 哈希后的安装实例 ID（重装可变；区分同设备多开）
 }

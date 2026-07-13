@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=960, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>对局HUD - 移动端</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style id="theme-vars">
+/* ============================================
+   Noita Game UI — Brand Design Tokens
+   Pixel Art Battle Game | RGB565 Palette
+   ============================================ */
+
+:root {
+  /* === Primary Palette (RGB565 derived) === */
+  --color-bg-deep: #0A0A14;
+  --color-bg: #0F0F1A;
+  --color-bg-elevated: #1A1A2E;
+  --color-bg-surface: #222240;
+  --color-border: #2D2D44;
+  --color-border-bright: #4A4A6A;
+  --color-text: #E8DCC8;
+  --color-text-dim: #8A8478;
+  --color-text-bright: #FFF5E6;
+
+  /* === Material Colors (from game docs) === */
+  --color-fire: #E8430A;
+  --color-fire-glow: #FF6B2B;
+  --color-ice: #07E8D0;
+  --color-ice-glow: #5BFFF0;
+  --color-poison: #7AE830;
+  --color-electric: #E8E007;
+  --color-blood: #E80730;
+  --color-holy: #F0E8B0;
+  --color-dark: #3A2868;
+  --color-nature: #2E8B20;
+  --color-water: #2068C0;
+  --color-earth: #A06030;
+  --color-air: #C0D0E0;
+
+  /* === State Colors === */
+  --state-danger: #F900;
+  --state-safe: #73FF;
+  --state-disabled: #514A;
+  --state-warning: #E8E007;
+  --state-info: #07E8D0;
+
+  /* === HP Bar Colors === */
+  --hp-full: #73FF;
+  --hp-high: #7AE830;
+  --hp-mid: #E8E007;
+  --hp-low: #E8430A;
+  --hp-critical: #F900;
+
+  /* === Accent — Fire Orange (primary identity) === */
+  --color-primary: #E8430A;
+  --color-primary-bright: #FF6B2B;
+  --color-primary-dim: #A03008;
+  --color-primary-bg: rgba(232, 67, 10, 0.15);
+
+  /* === Secondary — Ice Cyan (secondary identity) === */
+  --color-secondary: #07E8D0;
+  --color-secondary-bright: #5BFFF0;
+  --color-secondary-dim: #05A890;
+  --color-secondary-bg: rgba(7, 232, 208, 0.12);
+
+  /* === Typography === */
+  --font-pixel: 'Press Start 2P', 'DotGothic16', monospace;
+  --font-pixel-cn: 'DotGothic16', 'ZCOOL QingKe HuangYou', 'Press Start 2P', monospace;
+  --font-size-xs: 8px;
+  --font-size-sm: 10px;
+  --font-size-md: 12px;
+  --font-size-lg: 16px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 28px;
+  --font-size-3xl: 36px;
+  --line-height-tight: 1.2;
+  --line-height-normal: 1.4;
+
+  /* === Spacing (pixel-grid aligned) === */
+  --space-xs: 2px;
+  --space-sm: 4px;
+  --space-md: 8px;
+  --space-lg: 12px;
+  --space-xl: 16px;
+  --space-2xl: 24px;
+  --space-3xl: 32px;
+  --space-4xl: 48px;
+
+  /* === Shape — Pure pixel, no rounding === */
+  --radius-none: 0px;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+
+  /* === Border === */
+  --border-thin: 1px solid var(--color-border);
+  --border-normal: 2px solid var(--color-border);
+  --border-bright: 2px solid var(--color-border-bright);
+  --border-accent: 2px solid var(--color-primary);
+
+  /* === Pixel Shadow (hard offset, no blur) === */
+  --shadow-pixel-sm: 2px 2px 0px var(--color-bg-deep);
+  --shadow-pixel-md: 4px 4px 0px var(--color-bg-deep);
+  --shadow-pixel-lg: 6px 6px 0px var(--color-bg-deep);
+  --shadow-fire-sm: 2px 2px 0px var(--color-primary-dim);
+  --shadow-fire-md: 4px 4px 0px var(--color-primary-dim);
+
+  /* === Transitions (frame-step, no easing) === */
+  --transition-instant: none;
+  --transition-step: steps(4, end);
+  --transition-fast: 80ms steps(2, end);
+  --transition-normal: 160ms steps(4, end);
+
+  /* === Z-index layers === */
+  --z-base: 0;
+  --z-hud: 10;
+  --z-overlay: 50;
+  --z-modal: 100;
+  --z-tooltip: 200;
+}
+
+/* ============================================
+   Typography Classes
+   ============================================ */
+.text-pixel {
+  font-family: var(--font-pixel);
+  letter-spacing: 0.5px;
+  image-rendering: pixelated;
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: never;
+}
+
+.text-pixel-cn {
+  font-family: var(--font-pixel-cn);
+  letter-spacing: 1px;
+  image-rendering: pixelated;
+  -webkit-font-smoothing: none;
+}
+
+.text-xs { font-size: var(--font-size-xs); }
+.text-sm { font-size: var(--font-size-sm); }
+.text-md { font-size: var(--font-size-md); }
+.text-lg { font-size: var(--font-size-lg); }
+.text-xl { font-size: var(--font-size-xl); }
+.text-2xl { font-size: var(--font-size-2xl); }
+.text-3xl { font-size: var(--font-size-3xl); }
+
+.text-bright { color: var(--color-text-bright); }
+.text-dim { color: var(--color-text-dim); }
+.text-fire { color: var(--color-fire); }
+.text-ice { color: var(--color-ice); }
+.text-danger { color: var(--state-danger); }
+.text-safe { color: var(--state-safe); }
+
+/* ============================================
+   Pixel UI Component Primitives
+   ============================================ */
+.pixel-btn {
+  font-family: var(--font-pixel);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-bright);
+  background: var(--color-bg-elevated);
+  border: var(--border-normal);
+  padding: var(--space-md) var(--space-xl);
+  cursor: pointer;
+  box-shadow: var(--shadow-pixel-sm);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: all var(--transition-fast);
+  image-rendering: pixelated;
+}
+
+.pixel-btn:hover {
+  background: var(--color-bg-surface);
+  border-color: var(--color-primary);
+  color: var(--color-primary-bright);
+  box-shadow: var(--shadow-fire-sm);
+  transform: translate(-1px, -1px);
+}
+
+.pixel-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+
+.pixel-btn-primary {
+  background: var(--color-primary);
+  border-color: var(--color-primary-bright);
+  color: var(--color-text-bright);
+}
+
+.pixel-btn-primary:hover {
+  background: var(--color-primary-bright);
+  border-color: var(--color-primary-bright);
+}
+
+.pixel-btn-secondary {
+  background: var(--color-bg-elevated);
+  border-color: var(--color-secondary);
+  color: var(--color-secondary);
+}
+
+.pixel-btn-secondary:hover {
+  background: var(--color-secondary-bg);
+  color: var(--color-secondary-bright);
+  border-color: var(--color-secondary-bright);
+  box-shadow: 2px 2px 0px var(--color-secondary-dim);
+}
+
+.pixel-btn-sm {
+  font-size: var(--font-size-xs);
+  padding: var(--space-sm) var(--space-md);
+}
+
+.pixel-btn-lg {
+  font-size: var(--font-size-md);
+  padding: var(--space-lg) var(--space-2xl);
+}
+
+.pixel-panel {
+  background: var(--color-bg-elevated);
+  border: var(--border-normal);
+  box-shadow: var(--shadow-pixel-md);
+  padding: var(--space-xl);
+  image-rendering: pixelated;
+}
+
+.pixel-panel-bright {
+  border-color: var(--color-border-bright);
+}
+
+.pixel-panel-accent {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-fire-sm);
+}
+
+/* HP / Progress Bar */
+.pixel-bar {
+  height: 8px;
+  background: var(--color-bg-deep);
+  border: 1px solid var(--color-border);
+  image-rendering: pixelated;
+  overflow: hidden;
+}
+
+.pixel-bar-fill {
+  height: 100%;
+  background: var(--color-primary);
+  transition: width var(--transition-normal);
+}
+
+.pixel-bar-green .pixel-bar-fill { background: var(--hp-full); }
+.pixel-bar-yellow .pixel-bar-fill { background: var(--hp-mid); }
+.pixel-bar-red .pixel-bar-fill { background: var(--state-danger); }
+
+/* Material color badges */
+.mat-badge {
+  font-family: var(--font-pixel);
+  font-size: var(--font-size-xs);
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--color-border);
+  display: inline-block;
+  image-rendering: pixelated;
+}
+
+.mat-fire { color: var(--color-fire); border-color: var(--color-fire); background: rgba(232,67,10,0.15); }
+.mat-ice { color: var(--color-ice); border-color: var(--color-ice); background: rgba(7,232,208,0.12); }
+.mat-poison { color: var(--color-poison); border-color: var(--color-poison); background: rgba(122,232,48,0.12); }
+.mat-electric { color: var(--color-electric); border-color: var(--color-electric); background: rgba(232,224,7,0.12); }
+.mat-blood { color: var(--color-blood); border-color: var(--color-blood); background: rgba(232,7,48,0.15); }
+.mat-holy { color: var(--color-holy); border-color: var(--color-holy); background: rgba(240,232,176,0.12); }
+
+/* ============================================
+   Animation Keyframes (frame-step)
+   ============================================ */
+@keyframes pulse-fire {
+  0%, 100% { box-shadow: 0 0 4px var(--color-primary); }
+  50% { box-shadow: 0 0 12px var(--color-primary-bright); }
+}
+
+@keyframes pulse-ice {
+  0%, 100% { box-shadow: 0 0 4px var(--color-secondary); }
+  50% { box-shadow: 0 0 12px var(--color-secondary-bright); }
+}
+
+@keyframes blink {
+  0%, 60% { opacity: 1; }
+  70%, 90% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes slide-in-left {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes slide-in-right {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(-2px, 0); }
+  75% { transform: translate(2px, 0); }
+}
+
+@keyframes float-up {
+  from { transform: translateY(0); opacity: 1; }
+  to { transform: translateY(-20px); opacity: 0; }
+}
+
+/* Pixel border glow animation */
+@keyframes border-glow-fire {
+  0%, 100% { border-color: var(--color-primary); }
+  50% { border-color: var(--color-primary-bright); }
+}
+
+@keyframes border-glow-ice {
+  0%, 100% { border-color: var(--color-secondary); }
+  50% { border-color: var(--color-secondary-bright); }
+}
+
+    </style>
+    <style type="text/tailwindcss">
+@theme inline {
+  --color-primary: var(--color-primary);
+  --color-secondary: var(--color-secondary);
+}
+</style>
+    <style>
+@layer base {
+  body {
+    background-color: var(--color-bg-deep);
+    color: var(--color-text);
+    font-family: var(--font-pixel);
+    image-rendering: pixelated;
+    -webkit-font-smoothing: none;
+  }
+}
+</style>
+</head>
+<body>
+  <!-- Rotate hint for portrait mode -->
+  <div class="rotate-hint">
+    <span style="font-size: 40px; color: var(--color-primary);">||</span>
+    <span class="text-pixel-cn" style="color: var(--color-text-dim);">请旋转设备至横屏模式</span>
+  </div>
+
+  <!-- HUD Viewport (960x540) -->
+  <div class="hud-viewport">
+
+    <!-- === Top Info Bar === -->
+    <div class="top-bar">
+      <!-- P1 (left) -->
+      <div class="player-info">
+        <div class="player-avatar"></div>
+        <div class="player-bars">
+          <div class="bar-hp bar-hp-green">
+            <div class="bar-fill" style="width: 85%;"></div>
+          </div>
+          <div class="bar-shield">
+            <div class="bar-fill" style="width: 60%;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Timer (center) -->
+      <div class="timer">03:42</div>
+
+      <!-- P2 (right) -->
+      <div class="player-info">
+        <div class="player-bars">
+          <div class="bar-hp bar-hp-red">
+            <div class="bar-fill" style="width: 62%;"></div>
+          </div>
+          <div class="bar-shield">
+            <div class="bar-fill" style="width: 20%;"></div>
+          </div>
+        </div>
+        <div class="player-avatar"></div>
+      </div>
+    </div>
+
+    <!-- === Left Mid — HP/Status Compact === -->
+    <div class="hp-status-compact">
+      <div class="bar-hp bar-hp-green">
+        <div class="bar-fill" style="width: 85%;"></div>
+      </div>
+      <div class="bar-shield">
+        <div class="bar-fill" style="width: 60%;"></div>
+      </div>
+      <div class="hp-text">85/100</div>
+    </div>
+
+    <!-- === Right Top — Mini Map === -->
+    <div class="minimap">
+      <div class="terrain"></div>
+      <div class="wall wall-1"></div>
+      <div class="wall wall-2"></div>
+      <div class="wall wall-3"></div>
+      <div class="dot-p1"></div>
+      <div class="dot-p2"></div>
+    </div>
+
+    <!-- === Left Bottom — Virtual Joystick === -->
+    <div class="joystick-area">
+      <div class="joystick-ring"></div>
+      <div class="joystick-thumb">
+        <div class="joystick-cross"></div>
+      </div>
+    </div>
+
+    <!-- === Right Bottom — Skill Buttons === -->
+    <div class="skill-buttons">
+      <!-- Button 1: Attack (fire, largest) -->
+      <div class="skill-btn skill-btn-attack" data-dom-id="skill-attack">
+        <div class="icon-sword"></div>
+      </div>
+      <!-- Button 2: Spell (ice, with cooldown) -->
+      <div class="skill-btn skill-btn-spell" data-dom-id="skill-spell">
+        <div class="icon-star"></div>
+        <div class="cooldown-num">2</div>
+      </div>
+      <!-- Button 3: Dodge (electric) -->
+      <div class="skill-btn skill-btn-dodge" data-dom-id="skill-dodge">
+        <div class="icon-lightning"></div>
+      </div>
+      <!-- Button 4: Interact (gray) -->
+      <div class="skill-btn skill-btn-interact" data-dom-id="skill-interact">
+        <div class="icon-hand"></div>
+      </div>
+    </div>
+
+    <!-- === Pause Button === -->
+    <div class="pause-btn" data-dom-id="cta-pause">
+      <div class="pause-bar"></div>
+      <div class="pause-bar"></div>
+    </div>
+
+  </div>
+  <style>
+    /* === Mobile Landscape Lock === */
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: var(--color-bg-deep);
+      image-rendering: pixelated;
+      -webkit-font-smoothing: none;
+      -moz-osx-font-smoothing: never;
+    }
+
+    /* Force landscape orientation hint */
+    @media (orientation: portrait) {
+      .rotate-hint {
+        display: flex !important;
+      }
+    }
+    .rotate-hint {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: var(--z-modal);
+      background: var(--color-bg-deep);
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: var(--space-xl);
+    }
+    .rotate-hint span {
+      font-family: var(--font-pixel-cn);
+      font-size: var(--font-size-md);
+      color: var(--color-text-dim);
+    }
+
+    /* === HUD Container (960x540 effective area, centered) === */
+    .hud-viewport {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 960px;
+      height: 540px;
+      overflow: hidden;
+      background: #050510;
+      border: 2px solid var(--color-border);
+      image-rendering: pixelated;
+    }
+
+    /* Background scene — solid dark, no gradients */
+    .hud-viewport::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: #060612;
+      pointer-events: none;
+    }
+
+    /* === Top Info Bar === */
+    .top-bar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 40px;
+      background: rgba(10, 10, 20, 0.8);
+      border-bottom: 2px solid var(--color-primary);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 var(--space-lg);
+      z-index: var(--z-hud);
+      box-shadow: 0 2px 0px var(--color-bg-deep);
+    }
+
+    /* Player info block */
+    .player-info {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+    }
+
+    .player-avatar {
+      width: 24px;
+      height: 24px;
+      background: var(--color-bg-surface);
+      border: 1px solid var(--color-border-bright);
+      image-rendering: pixelated;
+      flex-shrink: 0;
+    }
+
+    .player-bars {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .bar-hp {
+      width: 120px;
+      height: 8px;
+      background: var(--color-bg-deep);
+      border: 1px solid var(--color-border);
+      overflow: hidden;
+    }
+    .bar-hp .bar-fill {
+      height: 100%;
+      transition: width var(--transition-normal);
+    }
+    .bar-hp-green .bar-fill { background: var(--hp-high); }
+    .bar-hp-red .bar-fill { background: var(--state-danger); }
+
+    .bar-shield {
+      width: 60px;
+      height: 4px;
+      background: var(--color-bg-deep);
+      border: 1px solid var(--color-border);
+      overflow: hidden;
+    }
+    .bar-shield .bar-fill {
+      height: 100%;
+      background: var(--color-ice);
+      transition: width var(--transition-normal);
+    }
+
+    /* Timer */
+    .timer {
+      font-family: var(--font-pixel);
+      font-size: var(--font-size-lg);
+      color: var(--color-primary-bright);
+      text-shadow: var(--shadow-fire-sm);
+      letter-spacing: 1px;
+    }
+
+    /* === Left Mid — HP/Status compact === */
+    .hp-status-compact {
+      position: absolute;
+      left: var(--space-md);
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: var(--z-hud);
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .hp-status-compact .bar-hp {
+      width: 100px;
+      height: 6px;
+    }
+    .hp-status-compact .bar-shield {
+      width: 50px;
+      height: 4px;
+    }
+    .hp-status-compact .hp-text {
+      font-family: var(--font-pixel);
+      font-size: var(--font-size-xs);
+      color: var(--color-text-dim);
+      margin-top: 2px;
+    }
+
+    /* === Right Top — Mini Map === */
+    .minimap {
+      position: absolute;
+      top: 48px;
+      right: var(--space-md);
+      width: 80px;
+      height: 80px;
+      background: var(--color-bg-elevated);
+      border: 1px solid var(--color-border-bright);
+      z-index: var(--z-hud);
+      image-rendering: pixelated;
+      overflow: hidden;
+    }
+    .minimap .terrain {
+      position: absolute;
+      inset: 0;
+      background: #0a1018;
+    }
+    .minimap .dot-p1 {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      background: var(--hp-high);
+      top: 40px;
+      left: 30px;
+    }
+    .minimap .dot-p2 {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      background: var(--state-danger);
+      top: 35px;
+      left: 55px;
+    }
+    .minimap .wall {
+      position: absolute;
+      background: var(--color-border);
+    }
+    .minimap .wall-1 { width: 60px; height: 2px; top: 20px; left: 10px; }
+    .minimap .wall-2 { width: 2px; height: 30px; top: 30px; left: 45px; }
+    .minimap .wall-3 { width: 40px; height: 2px; top: 60px; left: 25px; }
+
+    /* === Left Bottom — Virtual Joystick === */
+    .joystick-area {
+      position: absolute;
+      bottom: var(--space-xl);
+      left: var(--space-xl);
+      width: 100px;
+      height: 100px;
+      z-index: var(--z-hud);
+    }
+
+    /* Outer ring (octagonal) */
+    .joystick-ring {
+      position: absolute;
+      inset: 0;
+      clip-path: polygon(
+        30% 0%, 70% 0%,
+        100% 30%, 100% 70%,
+        70% 100%, 30% 100%,
+        0% 70%, 0% 30%
+      );
+      border: 2px solid var(--color-border-bright);
+      box-sizing: border-box;
+      background: rgba(26, 26, 46, 0.6);
+    }
+
+    .joystick-thumb {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(7, 232, 208, 0.25);
+      border: 2px solid var(--color-ice);
+      clip-path: polygon(
+        25% 0%, 75% 0%,
+        100% 25%, 100% 75%,
+        75% 100%, 25% 100%,
+        0% 75%, 0% 25%
+      );
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform var(--transition-fast);
+    }
+
+    /* Crosshair icon inside joystick */
+    .joystick-cross {
+      position: relative;
+      width: 16px;
+      height: 16px;
+    }
+    .joystick-cross::before,
+    .joystick-cross::after {
+      content: '';
+      position: absolute;
+      background: var(--color-ice);
+    }
+    .joystick-cross::before {
+      width: 2px;
+      height: 16px;
+      top: 0;
+      left: 7px;
+    }
+    .joystick-cross::after {
+      width: 16px;
+      height: 2px;
+      top: 7px;
+      left: 0;
+    }
+
+    /* === Right Bottom — Skill Buttons === */
+    .skill-buttons {
+      position: absolute;
+      bottom: var(--space-xl);
+      right: var(--space-xl);
+      display: grid;
+      grid-template-columns: 54px 54px;
+      grid-template-rows: 54px 54px;
+      gap: var(--space-sm);
+      z-index: var(--z-hud);
+    }
+
+    .skill-btn {
+      position: relative;
+      width: 50px;
+      height: 50px;
+      border: 2px solid var(--color-border);
+      background: rgba(26, 26, 46, 0.7);
+      clip-path: polygon(
+        20% 0%, 80% 0%,
+        100% 20%, 100% 80%,
+        80% 100%, 20% 100%,
+        0% 80%, 0% 20%
+      );
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+      box-shadow: var(--shadow-pixel-sm);
+    }
+
+    .skill-btn:active {
+      transform: scale(0.95);
+    }
+
+    /* Button 1 — Attack (fire, prominent) */
+    .skill-btn-attack {
+      border-color: var(--color-primary);
+      background: rgba(232, 67, 10, 0.2);
+      box-shadow: var(--shadow-fire-sm);
+      width: 54px;
+      height: 54px;
+      animation: border-glow-fire 2s infinite;
+    }
+    .skill-btn-attack:active {
+      transform: scale(0.95);
+      background: rgba(232, 67, 10, 0.4);
+    }
+
+    /* Pixel sword icon */
+    .icon-sword {
+      width: 16px;
+      height: 16px;
+      position: relative;
+    }
+    .icon-sword::before {
+      content: '';
+      position: absolute;
+      width: 4px;
+      height: 14px;
+      background: var(--color-primary-bright);
+      top: 0;
+      left: 6px;
+    }
+    .icon-sword::after {
+      content: '';
+      position: absolute;
+      width: 12px;
+      height: 3px;
+      background: var(--color-text-dim);
+      top: 10px;
+      left: 2px;
+    }
+
+    /* Button 2 — Spell (ice) */
+    .skill-btn-spell {
+      border-color: var(--color-ice);
+      background: rgba(7, 232, 208, 0.12);
+    }
+    .skill-btn-spell:active {
+      transform: scale(0.95);
+      background: rgba(7, 232, 208, 0.3);
+    }
+
+    /* Pixel star icon */
+    .icon-star {
+      width: 12px;
+      height: 12px;
+      position: relative;
+    }
+    .icon-star::before {
+      content: '';
+      position: absolute;
+      width: 4px;
+      height: 12px;
+      background: var(--color-ice);
+      top: 0;
+      left: 4px;
+      box-shadow: 4px 3px 0 var(--color-ice);
+    }
+    .icon-star::after {
+      content: '';
+      position: absolute;
+      width: 12px;
+      height: 4px;
+      background: var(--color-ice);
+      top: 4px;
+      left: 0;
+      box-shadow: 3px 4px 0 var(--color-ice);
+    }
+
+    /* Cooldown number overlay */
+    .cooldown-num {
+      position: absolute;
+      bottom: 2px;
+      right: 4px;
+      font-family: var(--font-pixel);
+      font-size: var(--font-size-xs);
+      color: var(--color-text-bright);
+      text-shadow: 1px 1px 0 var(--color-bg-deep);
+    }
+
+    /* Button 3 — Dodge (electric yellow) */
+    .skill-btn-dodge {
+      border-color: var(--color-electric);
+      background: rgba(232, 224, 7, 0.1);
+    }
+    .skill-btn-dodge:active {
+      transform: scale(0.95);
+      background: rgba(232, 224, 7, 0.25);
+    }
+
+    /* Pixel lightning icon */
+    .icon-lightning {
+      width: 10px;
+      height: 16px;
+      position: relative;
+    }
+    .icon-lightning::before {
+      content: '';
+      position: absolute;
+      width: 6px;
+      height: 4px;
+      background: var(--color-electric);
+      top: 0;
+      left: 4px;
+      box-shadow:
+        -4px 4px 0 var(--color-electric);
+    }
+    .icon-lightning::after {
+      content: '';
+      position: absolute;
+      width: 6px;
+      height: 4px;
+      background: var(--color-electric);
+      top: 8px;
+      left: 0;
+      box-shadow:
+        4px 4px 0 var(--color-electric);
+    }
+
+    /* Button 4 — Interact (gray) */
+    .skill-btn-interact {
+      border-color: var(--color-text-dim);
+      background: rgba(138, 132, 120, 0.1);
+    }
+    .skill-btn-interact:active {
+      transform: scale(0.95);
+      background: rgba(138, 132, 120, 0.25);
+    }
+
+    /* Pixel hand icon */
+    .icon-hand {
+      width: 12px;
+      height: 14px;
+      position: relative;
+    }
+    .icon-hand::before {
+      content: '';
+      position: absolute;
+      width: 10px;
+      height: 6px;
+      background: var(--color-text-dim);
+      top: 6px;
+      left: 1px;
+    }
+    .icon-hand::after {
+      content: '';
+      position: absolute;
+      width: 2px;
+      height: 8px;
+      background: var(--color-text-dim);
+      top: 0;
+      left: 2px;
+      box-shadow:
+        3px 0 0 var(--color-text-dim),
+        6px 0 0 var(--color-text-dim),
+        9px 0 0 var(--color-text-dim);
+    }
+
+    /* === Pause Button === */
+    .pause-btn {
+      position: absolute;
+      bottom: calc(var(--space-xl) + 130px);
+      right: var(--space-xl);
+      width: 24px;
+      height: 24px;
+      background: var(--color-bg-elevated);
+      border: 1px solid var(--color-border-bright);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      cursor: pointer;
+      z-index: var(--z-hud);
+      transition: transform var(--transition-fast), border-color var(--transition-fast);
+    }
+    .pause-btn:active {
+      transform: scale(0.95);
+    }
+    .pause-btn:hover {
+      border-color: var(--color-primary);
+    }
+    .pause-bar {
+      width: 2px;
+      height: 12px;
+      background: var(--color-text);
+    }
+  </style>
+</body>
+</html>

@@ -1,0 +1,80 @@
+{
+  "root": {
+    "nodeId": "gen-project-shell",
+    "kind": "project-shell",
+    "pageIds": ["page-main-menu", "page-hud-pc", "page-hud-mobile", "page-result", "page-pause", "page-settings"],
+    "output": "partials/project-shell.html",
+    "sharedRegions": [],
+    "privateRegions": [],
+    "mutableSlots": [],
+    "status": "generated",
+    "children": [
+      {
+        "nodeId": "gen-page-main-menu",
+        "kind": "page-leaf",
+        "pageIds": ["page-main-menu"],
+        "output": "pages/main-menu.html",
+        "sharedRegions": [],
+        "privateRegions": ["main menu body"],
+        "mutableSlots": [],
+        "status": "generated",
+        "children": []
+      },
+      {
+        "nodeId": "gen-page-hud-pc",
+        "kind": "page-leaf",
+        "pageIds": ["page-hud-pc"],
+        "output": "pages/hud-pc.html",
+        "sharedRegions": [],
+        "privateRegions": ["pc hud layout"],
+        "mutableSlots": [],
+        "status": "generated",
+        "children": []
+      },
+      {
+        "nodeId": "gen-page-hud-mobile",
+        "kind": "page-leaf",
+        "pageIds": ["page-hud-mobile"],
+        "output": "pages/hud-mobile.html",
+        "sharedRegions": [],
+        "privateRegions": ["mobile hud layout"],
+        "mutableSlots": [],
+        "status": "generated",
+        "children": []
+      },
+      {
+        "nodeId": "gen-page-result",
+        "kind": "page-leaf",
+        "pageIds": ["page-result"],
+        "output": "pages/result.html",
+        "sharedRegions": [],
+        "privateRegions": ["result screen body"],
+        "mutableSlots": [],
+        "status": "generated",
+        "children": []
+      },
+      {
+        "nodeId": "gen-page-pause",
+        "kind": "page-leaf",
+        "pageIds": ["page-pause"],
+        "output": "pages/pause.html",
+        "sharedRegions": [],
+        "privateRegions": ["pause overlay"],
+        "mutableSlots": [],
+        "status": "generated",
+        "children": []
+      },
+      {
+        "nodeId": "gen-page-settings",
+        "kind": "page-leaf",
+        "pageIds": ["page-settings"],
+        "output": "pages/settings.html",
+        "sharedRegions": [],
+        "privateRegions": ["settings body"],
+        "mutableSlots": [],
+        "status": "generated",
+        "children": []
+      }
+    ]
+  }
+}

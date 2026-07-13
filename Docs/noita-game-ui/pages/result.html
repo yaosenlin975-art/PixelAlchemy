@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>结算界面 - Noita 竞技场</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style id="theme-vars">
+/* ============================================
+   Noita Game UI — Brand Design Tokens
+   Pixel Art Battle Game | RGB565 Palette
+   ============================================ */
+
+:root {
+  /* === Primary Palette (RGB565 derived) === */
+  --color-bg-deep: #0A0A14;
+  --color-bg: #0F0F1A;
+  --color-bg-elevated: #1A1A2E;
+  --color-bg-surface: #222240;
+  --color-border: #2D2D44;
+  --color-border-bright: #4A4A6A;
+  --color-text: #E8DCC8;
+  --color-text-dim: #8A8478;
+  --color-text-bright: #FFF5E6;
+
+  /* === Material Colors (from game docs) === */
+  --color-fire: #E8430A;
+  --color-fire-glow: #FF6B2B;
+  --color-ice: #07E8D0;
+  --color-ice-glow: #5BFFF0;
+  --color-poison: #7AE830;
+  --color-electric: #E8E007;
+  --color-blood: #E80730;
+  --color-holy: #F0E8B0;
+  --color-dark: #3A2868;
+  --color-nature: #2E8B20;
+  --color-water: #2068C0;
+  --color-earth: #A06030;
+  --color-air: #C0D0E0;
+
+  /* === State Colors === */
+  --state-danger: #F900;
+  --state-safe: #73FF;
+  --state-disabled: #514A;
+  --state-warning: #E8E007;
+  --state-info: #07E8D0;
+
+  /* === HP Bar Colors === */
+  --hp-full: #73FF;
+  --hp-high: #7AE830;
+  --hp-mid: #E8E007;
+  --hp-low: #E8430A;
+  --hp-critical: #F900;
+
+  /* === Accent — Fire Orange (primary identity) === */
+  --color-primary: #E8430A;
+  --color-primary-bright: #FF6B2B;
+  --color-primary-dim: #A03008;
+  --color-primary-bg: rgba(232, 67, 10, 0.15);
+
+  /* === Secondary — Ice Cyan (secondary identity) === */
+  --color-secondary: #07E8D0;
+  --color-secondary-bright: #5BFFF0;
+  --color-secondary-dim: #05A890;
+  --color-secondary-bg: rgba(7, 232, 208, 0.12);
+
+  /* === Typography === */
+  --font-pixel: 'Press Start 2P', 'DotGothic16', monospace;
+  --font-pixel-cn: 'DotGothic16', 'ZCOOL QingKe HuangYou', 'Press Start 2P', monospace;
+  --font-size-xs: 8px;
+  --font-size-sm: 10px;
+  --font-size-md: 12px;
+  --font-size-lg: 16px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 28px;
+  --font-size-3xl: 36px;
+  --line-height-tight: 1.2;
+  --line-height-normal: 1.4;
+
+  /* === Spacing (pixel-grid aligned) === */
+  --space-xs: 2px;
+  --space-sm: 4px;
+  --space-md: 8px;
+  --space-lg: 12px;
+  --space-xl: 16px;
+  --space-2xl: 24px;
+  --space-3xl: 32px;
+  --space-4xl: 48px;
+
+  /* === Shape — Pure pixel, no rounding === */
+  --radius-none: 0px;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+
+  /* === Border === */
+  --border-thin: 1px solid var(--color-border);
+  --border-normal: 2px solid var(--color-border);
+  --border-bright: 2px solid var(--color-border-bright);
+  --border-accent: 2px solid var(--color-primary);
+
+  /* === Pixel Shadow (hard offset, no blur) === */
+  --shadow-pixel-sm: 2px 2px 0px var(--color-bg-deep);
+  --shadow-pixel-md: 4px 4px 0px var(--color-bg-deep);
+  --shadow-pixel-lg: 6px 6px 0px var(--color-bg-deep);
+  --shadow-fire-sm: 2px 2px 0px var(--color-primary-dim);
+  --shadow-fire-md: 4px 4px 0px var(--color-primary-dim);
+
+  /* === Transitions (frame-step, no easing) === */
+  --transition-instant: none;
+  --transition-step: steps(4, end);
+  --transition-fast: 80ms steps(2, end);
+  --transition-normal: 160ms steps(4, end);
+
+  /* === Z-index layers === */
+  --z-base: 0;
+  --z-hud: 10;
+  --z-overlay: 50;
+  --z-modal: 100;
+  --z-tooltip: 200;
+}
+
+/* ============================================
+   Typography Classes
+   ============================================ */
+.text-pixel {
+  font-family: var(--font-pixel);
+  letter-spacing: 0.5px;
+  image-rendering: pixelated;
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: never;
+}
+
+.text-pixel-cn {
+  font-family: var(--font-pixel-cn);
+  letter-spacing: 1px;
+  image-rendering: pixelated;
+  -webkit-font-smoothing: none;
+}
+
+.text-xs { font-size: var(--font-size-xs); }
+.text-sm { font-size: var(--font-size-sm); }
+.text-md { font-size: var(--font-size-md); }
+.text-lg { font-size: var(--font-size-lg); }
+.text-xl { font-size: var(--font-size-xl); }
+.text-2xl { font-size: var(--font-size-2xl); }
+.text-3xl { font-size: var(--font-size-3xl); }
+
+.text-bright { color: var(--color-text-bright); }
+.text-dim { color: var(--color-text-dim); }
+.text-fire { color: var(--color-fire); }
+.text-ice { color: var(--color-ice); }
+.text-danger { color: var(--state-danger); }
+.text-safe { color: var(--state-safe); }
+
+/* ============================================
+   Pixel UI Component Primitives
+   ============================================ */
+.pixel-btn {
+  font-family: var(--font-pixel);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-bright);
+  background: var(--color-bg-elevated);
+  border: var(--border-normal);
+  padding: var(--space-md) var(--space-xl);
+  cursor: pointer;
+  box-shadow: var(--shadow-pixel-sm);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: all var(--transition-fast);
+  image-rendering: pixelated;
+}
+
+.pixel-btn:hover {
+  background: var(--color-bg-surface);
+  border-color: var(--color-primary);
+  color: var(--color-primary-bright);
+  box-shadow: var(--shadow-fire-sm);
+  transform: translate(-1px, -1px);
+}
+
+.pixel-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+
+.pixel-btn-primary {
+  background: var(--color-primary);
+  border-color: var(--color-primary-bright);
+  color: var(--color-text-bright);
+}
+
+.pixel-btn-primary:hover {
+  background: var(--color-primary-bright);
+  border-color: var(--color-primary-bright);
+}
+
+.pixel-btn-secondary {
+  background: var(--color-bg-elevated);
+  border-color: var(--color-secondary);
+  color: var(--color-secondary);
+}
+
+.pixel-btn-secondary:hover {
+  background: var(--color-secondary-bg);
+  color: var(--color-secondary-bright);
+  border-color: var(--color-secondary-bright);
+  box-shadow: 2px 2px 0px var(--color-secondary-dim);
+}
+
+.pixel-btn-sm {
+  font-size: var(--font-size-xs);
+  padding: var(--space-sm) var(--space-md);
+}
+
+.pixel-btn-lg {
+  font-size: var(--font-size-md);
+  padding: var(--space-lg) var(--space-2xl);
+}
+
+.pixel-panel {
+  background: var(--color-bg-elevated);
+  border: var(--border-normal);
+  box-shadow: var(--shadow-pixel-md);
+  padding: var(--space-xl);
+  image-rendering: pixelated;
+}
+
+.pixel-panel-bright {
+  border-color: var(--color-border-bright);
+}
+
+.pixel-panel-accent {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-fire-sm);
+}
+
+/* HP / Progress Bar */
+.pixel-bar {
+  height: 8px;
+  background: var(--color-bg-deep);
+  border: 1px solid var(--color-border);
+  image-rendering: pixelated;
+  overflow: hidden;
+}
+
+.pixel-bar-fill {
+  height: 100%;
+  background: var(--color-primary);
+  transition: width var(--transition-normal);
+}
+
+.pixel-bar-green .pixel-bar-fill { background: var(--hp-full); }
+.pixel-bar-yellow .pixel-bar-fill { background: var(--hp-mid); }
+.pixel-bar-red .pixel-bar-fill { background: var(--state-danger); }
+
+/* Material color badges */
+.mat-badge {
+  font-family: var(--font-pixel-cn);
+  font-size: var(--font-size-xs);
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--color-border);
+  display: inline-block;
+  image-rendering: pixelated;
+}
+
+.mat-fire { color: var(--color-fire); border-color: var(--color-fire); background: rgba(232,67,10,0.15); }
+.mat-ice { color: var(--color-ice); border-color: var(--color-ice); background: rgba(7,232,208,0.12); }
+.mat-poison { color: var(--color-poison); border-color: var(--color-poison); background: rgba(122,232,48,0.12); }
+.mat-electric { color: var(--color-electric); border-color: var(--color-electric); background: rgba(232,224,7,0.12); }
+.mat-blood { color: var(--color-blood); border-color: var(--color-blood); background: rgba(232,7,48,0.15); }
+.mat-holy { color: var(--color-holy); border-color: var(--color-holy); background: rgba(240,232,176,0.12); }
+
+/* ============================================
+   Animation Keyframes (frame-step)
+   ============================================ */
+@keyframes pulse-fire {
+  0%, 100% { box-shadow: 0 0 4px var(--color-primary); }
+  50% { box-shadow: 0 0 12px var(--color-primary-bright); }
+}
+
+@keyframes pulse-ice {
+  0%, 100% { box-shadow: 0 0 4px var(--color-secondary); }
+  50% { box-shadow: 0 0 12px var(--color-secondary-bright); }
+}
+
+@keyframes blink {
+  0%, 60% { opacity: 1; }
+  70%, 90% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes slide-in-left {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes slide-in-right {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(-2px, 0); }
+  75% { transform: translate(2px, 0); }
+}
+
+@keyframes float-up {
+  from { transform: translateY(0); opacity: 1; }
+  to { transform: translateY(-20px); opacity: 0; }
+}
+
+/* Pixel border glow animation */
+@keyframes border-glow-fire {
+  0%, 100% { border-color: var(--color-primary); }
+  50% { border-color: var(--color-primary-bright); }
+}
+
+@keyframes border-glow-ice {
+  0%, 100% { border-color: var(--color-secondary); }
+  50% { border-color: var(--color-secondary-bright); }
+}
+
+    </style>
+    <style type="text/tailwindcss">
+@theme inline {
+  --color-primary: var(--color-primary);
+  --color-secondary: var(--color-secondary);
+}
+</style>
+    <style>
+@layer base {
+  body {
+    background-color: var(--color-bg-deep);
+    color: var(--color-text);
+    font-family: var(--font-pixel);
+    image-rendering: pixelated;
+    -webkit-font-smoothing: none;
+  }
+}
+</style>
+</head>
+<body>
+    <div class="result-container">
+
+        <!-- 1. 胜负横幅 -->
+        <div class="victory-banner">
+            <div class="victory-text text-pixel">VICTORY</div>
+            <div class="victory-subtitle text-pixel-cn">排位赛 - 第3局</div>
+        </div>
+
+        <!-- 2. MVP面板 -->
+        <div class="mvp-panel pixel-panel pixel-panel-accent">
+            <div class="mvp-label">MVP</div>
+            <div class="mvp-name text-pixel">P1</div>
+            <div class="mvp-stats text-pixel-cn">
+                <span>击杀 <span class="counter counter-animate">8</span></span>
+                <span>|</span>
+                <span>伤害 <span class="counter counter-animate">2340</span></span>
+                <span>|</span>
+                <span>存活 <span class="counter counter-animate">3:42</span></span>
+            </div>
+        </div>
+
+        <!-- 3. 排名榜 -->
+        <div class="ranking-section pixel-panel">
+            <table class="ranking-table">
+                <thead>
+                    <tr>
+                        <th>排名</th>
+                        <th>玩家</th>
+                        <th>击杀</th>
+                        <th>伤害</th>
+                        <th>存活</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="row-highlight">
+                        <td class="rank-number">#1</td>
+                        <td>P1</td>
+                        <td class="counter counter-animate">8</td>
+                        <td class="counter counter-animate">2340</td>
+                        <td class="counter counter-animate">3:42</td>
+                    </tr>
+                    <tr>
+                        <td class="rank-number">#2</td>
+                        <td>P2</td>
+                        <td>5</td>
+                        <td>1890</td>
+                        <td>2:58</td>
+                    </tr>
+                    <tr>
+                        <td class="rank-number">#3</td>
+                        <td>P3</td>
+                        <td>3</td>
+                        <td>1200</td>
+                        <td>2:10</td>
+                    </tr>
+                    <tr class="row-dim">
+                        <td class="rank-number">#4</td>
+                        <td>P4</td>
+                        <td>1</td>
+                        <td>680</td>
+                        <td>1:22</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 4. 战绩卡片 -->
+        <div class="stat-cards">
+            <!-- 卡片1: 本局数据 -->
+            <div class="stat-card pixel-panel">
+                <div class="stat-card-title text-pixel-cn">本局数据</div>
+                <div class="stat-row">
+                    <span class="stat-label text-pixel-cn">最常用法术</span>
+                    <span class="mat-badge mat-fire text-pixel-cn">火球术</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label text-pixel-cn">最高连击</span>
+                    <span class="stat-value">5x</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label text-pixel-cn">材料收集</span>
+                    <span class="text-pixel-cn text-sm">
+                        <span class="mat-text-fire">火+45</span>
+                        <span style="margin: 0 4px; color: var(--color-text-dim);">/</span>
+                        <span class="mat-text-ice">冰+30</span>
+                    </span>
+                </div>
+            </div>
+
+            <!-- 卡片2: 排位变化 -->
+            <div class="stat-card pixel-panel">
+                <div class="stat-card-title text-pixel-cn">排位变化</div>
+                <div class="stat-row">
+                    <span class="stat-label text-pixel-cn">段位</span>
+                    <span class="text-pixel-cn text-sm">
+                        <span class="rank-icon"></span>白银 III
+                        <span class="rank-change-arrow">&#x25B6;</span>
+                        <span class="rank-icon"></span>白银 II
+                    </span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label text-pixel-cn">LP变化</span>
+                    <span class="stat-value text-safe" style="color: var(--color-secondary);">+25 LP</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label text-pixel-cn">总场次</span>
+                    <span class="stat-value">42W / 18L</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. 底部操作区 -->
+        <div class="action-area">
+            <button class="pixel-btn pixel-btn-primary pixel-btn-lg text-pixel-cn" data-dom-id="cta-hud-pc">再来一局</button>
+            <button class="pixel-btn pixel-btn-lg text-pixel-cn" data-dom-id="nav-main-menu">返回大厅</button>
+        </div>
+
+    </div>
+    <style>
+        /* === Result Page Specific Styles === */
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: var(--color-bg-deep);
+            color: var(--color-text);
+            font-family: var(--font-pixel-cn);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding-top: 32px;
+            image-rendering: pixelated;
+            -webkit-font-smoothing: none;
+        }
+
+        .result-container {
+            width: 100%;
+            max-width: 800px;
+            padding: var(--space-2xl);
+        }
+
+        /* --- Victory Banner --- */
+        .victory-banner {
+            text-align: center;
+            margin-bottom: var(--space-3xl);
+            padding: var(--space-3xl) var(--space-2xl);
+            border: 3px solid var(--color-primary);
+            background: var(--color-bg-elevated);
+            box-shadow: var(--shadow-fire-md);
+            animation: banner-enter 0.6s steps(8, end) both, border-glow-fire 1.2s steps(4, end) infinite;
+            position: relative;
+        }
+
+        @keyframes banner-enter {
+            from {
+                opacity: 0;
+                transform: translateY(-40px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .victory-text {
+            font-family: var(--font-pixel);
+            font-size: var(--font-size-3xl);
+            color: var(--color-primary-bright);
+            text-shadow: var(--shadow-fire-md);
+            letter-spacing: 4px;
+            margin-bottom: var(--space-md);
+        }
+
+        .victory-subtitle {
+            font-size: var(--font-size-sm);
+            color: var(--color-text-dim);
+            letter-spacing: 1px;
+        }
+
+        /* --- MVP Panel --- */
+        .mvp-panel {
+            text-align: center;
+            margin: 0 auto var(--space-3xl);
+            max-width: 360px;
+            padding: var(--space-xl) var(--space-2xl);
+        }
+
+        .mvp-label {
+            font-family: var(--font-pixel);
+            font-size: var(--font-size-sm);
+            color: var(--color-primary-bright);
+            letter-spacing: 2px;
+            margin-bottom: var(--space-sm);
+            animation: pulse-fire 1.2s steps(4, end) infinite;
+            display: inline-block;
+            padding: var(--space-xs) var(--space-md);
+            border: 1px solid var(--color-primary);
+        }
+
+        .mvp-name {
+            font-family: var(--font-pixel);
+            font-size: var(--font-size-lg);
+            color: var(--color-text-bright);
+            margin-bottom: var(--space-md);
+        }
+
+        .mvp-stats {
+            font-size: var(--font-size-sm);
+            color: var(--color-text-dim);
+        }
+
+        .mvp-stats span {
+            margin: 0 var(--space-sm);
+        }
+
+        /* --- Ranking Table --- */
+        .ranking-section {
+            margin-bottom: var(--space-3xl);
+        }
+
+        .ranking-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: var(--font-size-sm);
+            image-rendering: pixelated;
+        }
+
+        .ranking-table th {
+            font-family: var(--font-pixel-cn);
+            font-size: var(--font-size-xs);
+            color: var(--color-text-dim);
+            text-align: left;
+            padding: var(--space-sm) var(--space-md);
+            border-bottom: 1px solid var(--color-border);
+            letter-spacing: 1px;
+        }
+
+        .ranking-table td {
+            font-family: var(--font-pixel-cn);
+            padding: var(--space-md);
+            border-bottom: 1px solid var(--color-border);
+            transition: background var(--transition-fast);
+        }
+
+        .ranking-table tbody tr {
+            opacity: 0;
+            animation: row-fade-in 0.4s steps(6, end) forwards;
+        }
+
+        .ranking-table tbody tr:nth-child(1) { animation-delay: 0.15s; }
+        .ranking-table tbody tr:nth-child(2) { animation-delay: 0.30s; }
+        .ranking-table tbody tr:nth-child(3) { animation-delay: 0.45s; }
+        .ranking-table tbody tr:nth-child(4) { animation-delay: 0.60s; }
+
+        @keyframes row-fade-in {
+            from { opacity: 0; transform: translateX(-8px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .ranking-table .row-highlight {
+            background: var(--color-primary-bg);
+            border-left: 3px solid var(--color-primary);
+        }
+
+        .ranking-table .row-highlight td {
+            color: var(--color-text-bright);
+        }
+
+        .ranking-table .row-highlight td:first-child {
+            color: var(--color-primary-bright);
+        }
+
+        .ranking-table .row-dim td {
+            color: var(--color-text-dim);
+        }
+
+        .rank-number {
+            font-family: var(--font-pixel);
+            color: var(--color-text-dim);
+        }
+
+        .row-highlight .rank-number {
+            color: var(--color-primary-bright);
+        }
+
+        /* --- Stat Cards --- */
+        .stat-cards {
+            display: flex;
+            gap: var(--space-xl);
+            margin-bottom: var(--space-3xl);
+        }
+
+        .stat-card {
+            flex: 1;
+            padding: var(--space-xl);
+        }
+
+        .stat-card-title {
+            font-family: var(--font-pixel-cn);
+            font-size: var(--font-size-sm);
+            color: var(--color-text-bright);
+            margin-bottom: var(--space-lg);
+            border-bottom: 1px solid var(--color-border);
+            padding-bottom: var(--space-sm);
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--space-md);
+            font-size: var(--font-size-sm);
+        }
+
+        .stat-label {
+            color: var(--color-text-dim);
+        }
+
+        .stat-value {
+            font-family: var(--font-pixel);
+            font-size: var(--font-size-sm);
+            color: var(--color-text-bright);
+        }
+
+        .mat-inline {
+            margin-right: var(--space-xs);
+        }
+
+        /* Material color inline text */
+        .mat-text-fire { color: var(--color-fire); }
+        .mat-text-ice { color: var(--color-ice); }
+
+        /* Rank change */
+        .rank-change-arrow {
+            font-family: var(--font-pixel);
+            color: var(--color-secondary);
+            margin: 0 var(--space-xs);
+        }
+
+        /* Pixel rank icon */
+        .rank-icon {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            background: var(--color-secondary);
+            border: 1px solid var(--color-secondary-bright);
+            margin-right: var(--space-sm);
+            vertical-align: middle;
+            position: relative;
+            top: -1px;
+        }
+
+        /* --- Action Buttons --- */
+        .action-area {
+            display: flex;
+            gap: var(--space-xl);
+            justify-content: center;
+        }
+
+        .action-area .pixel-btn-lg {
+            min-width: 160px;
+            text-align: center;
+        }
+
+        /* --- Counter animation via CSS --- */
+        .counter {
+            display: inline-block;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .counter-animate {
+            animation: counter-pop 0.3s steps(4, end);
+        }
+
+        @keyframes counter-pop {
+            0% { transform: scale(1.4); color: var(--color-primary-bright); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</body>
+</html>

@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>设置 - Noita 竞技场</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style id="theme-vars">
+/* ============================================
+   Noita Game UI — Brand Design Tokens
+   Pixel Art Battle Game | RGB565 Palette
+   ============================================ */
+
+:root {
+  /* === Primary Palette (RGB565 derived) === */
+  --color-bg-deep: #0A0A14;
+  --color-bg: #0F0F1A;
+  --color-bg-elevated: #1A1A2E;
+  --color-bg-surface: #222240;
+  --color-border: #2D2D44;
+  --color-border-bright: #4A4A6A;
+  --color-text: #E8DCC8;
+  --color-text-dim: #8A8478;
+  --color-text-bright: #FFF5E6;
+
+  /* === Material Colors (from game docs) === */
+  --color-fire: #E8430A;
+  --color-fire-glow: #FF6B2B;
+  --color-ice: #07E8D0;
+  --color-ice-glow: #5BFFF0;
+  --color-poison: #7AE830;
+  --color-electric: #E8E007;
+  --color-blood: #E80730;
+  --color-holy: #F0E8B0;
+  --color-dark: #3A2868;
+  --color-nature: #2E8B20;
+  --color-water: #2068C0;
+  --color-earth: #A06030;
+  --color-air: #C0D0E0;
+
+  /* === State Colors === */
+  --state-danger: #F900;
+  --state-safe: #73FF;
+  --state-disabled: #514A;
+  --state-warning: #E8E007;
+  --state-info: #07E8D0;
+
+  /* === HP Bar Colors === */
+  --hp-full: #73FF;
+  --hp-high: #7AE830;
+  --hp-mid: #E8E007;
+  --hp-low: #E8430A;
+  --hp-critical: #F900;
+
+  /* === Accent — Fire Orange (primary identity) === */
+  --color-primary: #E8430A;
+  --color-primary-bright: #FF6B2B;
+  --color-primary-dim: #A03008;
+  --color-primary-bg: rgba(232, 67, 10, 0.15);
+
+  /* === Secondary — Ice Cyan (secondary identity) === */
+  --color-secondary: #07E8D0;
+  --color-secondary-bright: #5BFFF0;
+  --color-secondary-dim: #05A890;
+  --color-secondary-bg: rgba(7, 232, 208, 0.12);
+
+  /* === Typography === */
+  --font-pixel: 'Press Start 2P', 'DotGothic16', monospace;
+  --font-pixel-cn: 'DotGothic16', 'ZCOOL QingKe HuangYou', 'Press Start 2P', monospace;
+  --font-size-xs: 8px;
+  --font-size-sm: 10px;
+  --font-size-md: 12px;
+  --font-size-lg: 16px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 28px;
+  --font-size-3xl: 36px;
+  --line-height-tight: 1.2;
+  --line-height-normal: 1.4;
+
+  /* === Spacing (pixel-grid aligned) === */
+  --space-xs: 2px;
+  --space-sm: 4px;
+  --space-md: 8px;
+  --space-lg: 12px;
+  --space-xl: 16px;
+  --space-2xl: 24px;
+  --space-3xl: 32px;
+  --space-4xl: 48px;
+
+  /* === Shape — Pure pixel, no rounding === */
+  --radius-none: 0px;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+
+  /* === Border === */
+  --border-thin: 1px solid var(--color-border);
+  --border-normal: 2px solid var(--color-border);
+  --border-bright: 2px solid var(--color-border-bright);
+  --border-accent: 2px solid var(--color-primary);
+
+  /* === Pixel Shadow (hard offset, no blur) === */
+  --shadow-pixel-sm: 2px 2px 0px var(--color-bg-deep);
+  --shadow-pixel-md: 4px 4px 0px var(--color-bg-deep);
+  --shadow-pixel-lg: 6px 6px 0px var(--color-bg-deep);
+  --shadow-fire-sm: 2px 2px 0px var(--color-primary-dim);
+  --shadow-fire-md: 4px 4px 0px var(--color-primary-dim);
+
+  /* === Transitions (frame-step, no easing) === */
+  --transition-instant: none;
+  --transition-step: steps(4, end);
+  --transition-fast: 80ms steps(2, end);
+  --transition-normal: 160ms steps(4, end);
+
+  /* === Z-index layers === */
+  --z-base: 0;
+  --z-hud: 10;
+  --z-overlay: 50;
+  --z-modal: 100;
+  --z-tooltip: 200;
+}
+
+/* ============================================
+   Typography Classes
+   ============================================ */
+.text-pixel {
+  font-family: var(--font-pixel);
+  letter-spacing: 0.5px;
+  image-rendering: pixelated;
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: never;
+}
+
+.text-pixel-cn {
+  font-family: var(--font-pixel-cn);
+  letter-spacing: 1px;
+  image-rendering: pixelated;
+  -webkit-font-smoothing: none;
+}
+
+.text-xs { font-size: var(--font-size-xs); }
+.text-sm { font-size: var(--font-size-sm); }
+.text-md { font-size: var(--font-size-md); }
+.text-lg { font-size: var(--font-size-lg); }
+.text-xl { font-size: var(--font-size-xl); }
+.text-2xl { font-size: var(--font-size-2xl); }
+.text-3xl { font-size: var(--font-size-3xl); }
+
+.text-bright { color: var(--color-text-bright); }
+.text-dim { color: var(--color-text-dim); }
+.text-fire { color: var(--color-fire); }
+.text-ice { color: var(--color-ice); }
+.text-danger { color: var(--state-danger); }
+.text-safe { color: var(--state-safe); }
+
+/* ============================================
+   Pixel UI Component Primitives
+   ============================================ */
+.pixel-btn {
+  font-family: var(--font-pixel);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-bright);
+  background: var(--color-bg-elevated);
+  border: var(--border-normal);
+  padding: var(--space-md) var(--space-xl);
+  cursor: pointer;
+  box-shadow: var(--shadow-pixel-sm);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: all var(--transition-fast);
+  image-rendering: pixelated;
+}
+
+.pixel-btn:hover {
+  background: var(--color-bg-surface);
+  border-color: var(--color-primary);
+  color: var(--color-primary-bright);
+  box-shadow: var(--shadow-fire-sm);
+  transform: translate(-1px, -1px);
+}
+
+.pixel-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+
+.pixel-btn-primary {
+  background: var(--color-primary);
+  border-color: var(--color-primary-bright);
+  color: var(--color-text-bright);
+}
+
+.pixel-btn-primary:hover {
+  background: var(--color-primary-bright);
+  border-color: var(--color-primary-bright);
+}
+
+.pixel-btn-secondary {
+  background: var(--color-bg-elevated);
+  border-color: var(--color-secondary);
+  color: var(--color-secondary);
+}
+
+.pixel-btn-secondary:hover {
+  background: var(--color-secondary-bg);
+  color: var(--color-secondary-bright);
+  border-color: var(--color-secondary-bright);
+  box-shadow: 2px 2px 0px var(--color-secondary-dim);
+}
+
+.pixel-btn-sm {
+  font-size: var(--font-size-xs);
+  padding: var(--space-sm) var(--space-md);
+}
+
+.pixel-btn-lg {
+  font-size: var(--font-size-md);
+  padding: var(--space-lg) var(--space-2xl);
+}
+
+.pixel-panel {
+  background: var(--color-bg-elevated);
+  border: var(--border-normal);
+  box-shadow: var(--shadow-pixel-md);
+  padding: var(--space-xl);
+  image-rendering: pixelated;
+}
+
+.pixel-panel-bright {
+  border-color: var(--color-border-bright);
+}
+
+.pixel-panel-accent {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-fire-sm);
+}
+
+/* HP / Progress Bar */
+.pixel-bar {
+  height: 8px;
+  background: var(--color-bg-deep);
+  border: 1px solid var(--color-border);
+  image-rendering: pixelated;
+  overflow: hidden;
+}
+
+.pixel-bar-fill {
+  height: 100%;
+  background: var(--color-primary);
+  transition: width var(--transition-normal);
+}
+
+.pixel-bar-green .pixel-bar-fill { background: var(--hp-full); }
+.pixel-bar-yellow .pixel-bar-fill { background: var(--hp-mid); }
+.pixel-bar-red .pixel-bar-fill { background: var(--state-danger); }
+
+/* Material color badges */
+.mat-badge {
+  font-family: var(--font-pixel);
+  font-size: var(--font-size-xs);
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--color-border);
+  display: inline-block;
+  image-rendering: pixelated;
+}
+
+.mat-fire { color: var(--color-fire); border-color: var(--color-fire); background: rgba(232,67,10,0.15); }
+.mat-ice { color: var(--color-ice); border-color: var(--color-ice); background: rgba(7,232,208,0.12); }
+.mat-poison { color: var(--color-poison); border-color: var(--color-poison); background: rgba(122,232,48,0.12); }
+.mat-electric { color: var(--color-electric); border-color: var(--color-electric); background: rgba(232,224,7,0.12); }
+.mat-blood { color: var(--color-blood); border-color: var(--color-blood); background: rgba(232,7,48,0.15); }
+.mat-holy { color: var(--color-holy); border-color: var(--color-holy); background: rgba(240,232,176,0.12); }
+
+/* ============================================
+   Animation Keyframes (frame-step)
+   ============================================ */
+@keyframes pulse-fire {
+  0%, 100% { box-shadow: 0 0 4px var(--color-primary); }
+  50% { box-shadow: 0 0 12px var(--color-primary-bright); }
+}
+
+@keyframes pulse-ice {
+  0%, 100% { box-shadow: 0 0 4px var(--color-secondary); }
+  50% { box-shadow: 0 0 12px var(--color-secondary-bright); }
+}
+
+@keyframes blink {
+  0%, 60% { opacity: 1; }
+  70%, 90% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes slide-in-left {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes slide-in-right {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(-2px, 0); }
+  75% { transform: translate(2px, 0); }
+}
+
+@keyframes float-up {
+  from { transform: translateY(0); opacity: 1; }
+  to { transform: translateY(-20px); opacity: 0; }
+}
+
+/* Pixel border glow animation */
+@keyframes border-glow-fire {
+  0%, 100% { border-color: var(--color-primary); }
+  50% { border-color: var(--color-primary-bright); }
+}
+
+@keyframes border-glow-ice {
+  0%, 100% { border-color: var(--color-secondary); }
+  50% { border-color: var(--color-secondary-bright); }
+}
+
+    </style>
+    <style type="text/tailwindcss">
+@theme inline {
+  --color-primary: var(--color-primary);
+  --color-secondary: var(--color-secondary);
+}
+</style>
+    <style>
+@layer base {
+  body {
+    background-color: var(--color-bg-deep);
+    color: var(--color-text);
+    font-family: var(--font-pixel);
+    image-rendering: pixelated;
+    -webkit-font-smoothing: none;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="settings-container">
+
+  <!-- Header -->
+  <div class="settings-header">
+    <div class="btn-back">
+      <button class="pixel-btn pixel-btn-sm text-pixel-cn" data-dom-id="back-main-menu">&larr; 返回</button>
+    </div>
+    <h1 class="text-xl text-pixel-cn text-fire">设置</h1>
+  </div>
+
+  <!-- Main Layout -->
+  <div class="settings-layout">
+
+    <!-- Left Sidebar Tabs -->
+    <div class="settings-tabs">
+      <button class="tab-btn text-pixel-cn active" data-tab="graphics">画质</button>
+      <button class="tab-btn text-pixel-cn" data-tab="audio">音频</button>
+      <button class="tab-btn text-pixel-cn" data-tab="controls">操控</button>
+      <button class="tab-btn text-pixel-cn" data-tab="general">通用</button>
+    </div>
+
+    <!-- Right Content Panel -->
+    <div class="settings-content">
+
+      <!-- ===== Graphics Tab ===== -->
+      <div class="tab-panel active" id="panel-graphics">
+
+        <div class="setting-row">
+          <span class="setting-label">分辨率</span>
+          <div class="setting-control">
+            <div class="pixel-select-wrapper" data-dom-id="select-resolution">
+              <div class="pixel-select-display">
+                <span>1280 x 720</span>
+                <div class="pixel-select-arrow"></div>
+              </div>
+              <div class="pixel-select-dropdown">
+                <div class="pixel-select-option selected">1280 x 720</div>
+                <div class="pixel-select-option">1366 x 768</div>
+                <div class="pixel-select-option">1600 x 900</div>
+                <div class="pixel-select-option">1920 x 1080</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <span class="setting-label">画质</span>
+          <div class="setting-control">
+            <div class="level-btn-group" data-dom-id="quality-level">
+              <button class="level-btn text-pixel-cn" data-value="low">低</button>
+              <button class="level-btn text-pixel-cn" data-value="mid">中</button>
+              <button class="level-btn text-pixel-cn active" data-value="high">高</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <span class="setting-label">帧率</span>
+          <div class="setting-control">
+            <div class="level-btn-group" data-dom-id="framerate-level">
+              <button class="level-btn text-pixel" data-value="30">30</button>
+              <button class="level-btn text-pixel active" data-value="60">60</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <span class="setting-label">粒子效果</span>
+          <div class="setting-control">
+            <div class="pixel-toggle on" data-dom-id="toggle-particles">
+              <div class="toggle-knob"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <span class="setting-label">屏幕震动</span>
+          <div class="setting-control">
+            <div class="pixel-toggle on" data-dom-id="toggle-screen-shake">
+              <div class="toggle-knob"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <span class="setting-label">显示FPS</span>
+          <div class="setting-control">
+            <div class="pixel-toggle" data-dom-id="toggle-show-fps">
+              <div class="toggle-knob"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ===== Audio Tab ===== -->
+      <div class="tab-panel" id="panel-audio">
+
+        <div class="setting-row">
+          <span class="setting-label">主音量</span>
+          <div class="setting-control">
+            <div class="pixel-range" data-dom-id="range-master" data-value="75">
+              <div class="pixel-range-track">
+                <div class="pixel-range-fill" style="width: 75%"></div>
+                <div class="pixel-range-handle" style="left: calc(75% - 2px)"></div>
+              </div>
+              <span class="pixel-range-value text-pixel">75%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <span class="setting-label">音效音量</span>
+          <div class="setting-control">
+            <div class="pixel-range" data-dom-id="range-sfx" data-value="100">
+              <div class="pixel-range-track">
+                <div class="pixel-range-fill" style="width: 100%"></div>
+                <div class="pixel-range-handle" style="left: calc(100% - 2px)"></div>
+              </div>
+              <span class="pixel-range-value text-pixel">100%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <span class="setting-label">背景音乐</span>
+          <div class="setting-control">
+            <div class="pixel-range" data-dom-id="range-bgm" data-value="50">
+              <div class="pixel-range-track">
+                <div class="pixel-range-fill" style="width: 50%"></div>
+                <div class="pixel-range-handle" style="left: calc(50% - 2px)"></div>
+              </div>
+              <span class="pixel-range-value text-pixel">50%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <span class="setting-label">语音聊天</span>
+          <div class="setting-control">
+            <div class="pixel-range" data-dom-id="range-voice" data-value="80">
+              <div class="pixel-range-track">
+                <div class="pixel-range-fill" style="width: 80%"></div>
+                <div class="pixel-range-handle" style="left: calc(80% - 2px)"></div>
+              </div>
+              <span class="pixel-range-value text-pixel">80%</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ===== Controls Tab ===== -->
+      <div class="tab-panel" id="panel-controls">
+
+        <div class="section-title text-pixel-cn">按键映射</div>
+
+        <div class="keybind-row">
+          <span class="keybind-action">移动</span>
+          <div class="keybind-key text-pixel">W A S D</div>
+        </div>
+        <div class="keybind-row">
+          <span class="keybind-action">跳跃</span>
+          <div class="keybind-key text-pixel">SPACE</div>
+        </div>
+        <div class="keybind-row">
+          <span class="keybind-action">施法</span>
+          <div class="keybind-key text-pixel">LMB</div>
+        </div>
+        <div class="keybind-row">
+          <span class="keybind-action">物品栏</span>
+          <div class="keybind-key text-pixel">TAB</div>
+        </div>
+        <div class="keybind-row">
+          <span class="keybind-action">冲刺</span>
+          <div class="keybind-key text-pixel">SHIFT</div>
+        </div>
+
+        <div class="section-title text-pixel-cn" style="margin-top: var(--space-xl);">灵敏度</div>
+
+        <div class="setting-row">
+          <span class="setting-label">鼠标灵敏度</span>
+          <div class="setting-control">
+            <div class="pixel-range" data-dom-id="range-sensitivity" data-value="60">
+              <div class="pixel-range-track">
+                <div class="pixel-range-fill" style="width: 60%"></div>
+                <div class="pixel-range-handle" style="left: calc(60% - 2px)"></div>
+              </div>
+              <span class="pixel-range-value text-pixel">60%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <span class="setting-label">振动</span>
+          <div class="setting-control">
+            <div class="pixel-toggle on" data-dom-id="toggle-vibration">
+              <div class="toggle-knob"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ===== General Tab ===== -->
+      <div class="tab-panel" id="panel-general">
+
+        <div class="setting-row">
+          <span class="setting-label">语言</span>
+          <div class="setting-control">
+            <div class="pixel-select-wrapper" data-dom-id="select-language">
+              <div class="pixel-select-display">
+                <span>简体中文</span>
+                <div class="pixel-select-arrow"></div>
+              </div>
+              <div class="pixel-select-dropdown">
+                <div class="pixel-select-option selected">简体中文</div>
+                <div class="pixel-select-option">English</div>
+                <div class="pixel-select-option">日本語</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <span class="setting-label">字幕</span>
+          <div class="setting-control">
+            <div class="pixel-toggle on" data-dom-id="toggle-subtitles">
+              <div class="toggle-knob"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <span class="setting-label">自动保存</span>
+          <div class="setting-control">
+            <div class="pixel-toggle on" data-dom-id="toggle-autosave">
+              <div class="toggle-knob"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <span class="setting-label">显示提示</span>
+          <div class="setting-control">
+            <div class="pixel-toggle" data-dom-id="toggle-hints">
+              <div class="toggle-knob"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div><!-- /.settings-content -->
+  </div><!-- /.settings-layout -->
+
+  <!-- Footer Actions -->
+  <div class="settings-footer">
+    <button class="pixel-btn pixel-btn-sm text-pixel-cn" data-dom-id="restore-defaults">恢复默认</button>
+    <button class="pixel-btn pixel-btn-primary pixel-btn-lg text-pixel-cn" data-dom-id="apply-settings">应用</button>
+  </div>
+
+</div><!-- /.settings-container -->
+
+<style>
+    /* === Page Reset === */
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: var(--color-bg);
+      color: var(--color-text);
+      font-family: var(--font-pixel-cn);
+      font-size: var(--font-size-md);
+      line-height: var(--line-height-normal);
+      image-rendering: pixelated;
+      -webkit-font-smoothing: none;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding-top: var(--space-4xl);
+    }
+
+    /* === Settings Container === */
+    .settings-container {
+      max-width: 900px;
+      width: 100%;
+      position: relative;
+    }
+
+    /* === Header === */
+    .settings-header {
+      text-align: center;
+      margin-bottom: var(--space-2xl);
+      position: relative;
+    }
+
+    .settings-header .text-xl {
+      color: var(--color-fire);
+    }
+
+    .btn-back {
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    /* === Main Layout === */
+    .settings-layout {
+      display: flex;
+      gap: var(--space-xl);
+    }
+
+    /* === Sidebar Tabs === */
+    .settings-tabs {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-sm);
+      min-width: 72px;
+    }
+
+    .tab-btn {
+      font-family: var(--font-pixel-cn);
+      font-size: var(--font-size-sm);
+      padding: var(--space-md) var(--space-lg);
+      background: var(--color-bg-elevated);
+      border: var(--border-normal);
+      color: var(--color-text);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .tab-btn:hover {
+      border-color: var(--color-primary);
+      color: var(--color-primary-bright);
+    }
+
+    .tab-btn.active {
+      background: var(--color-primary-bg);
+      border-color: var(--color-primary);
+      color: var(--color-primary-bright);
+      animation: border-glow-fire 1.6s steps(4, end) infinite;
+    }
+
+    /* === Content Panel === */
+    .settings-content {
+      flex: 1;
+      background: var(--color-bg-elevated);
+      border: var(--border-normal);
+      box-shadow: var(--shadow-pixel-md);
+      padding: var(--space-2xl);
+      min-height: 420px;
+    }
+
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    /* === Setting Row === */
+    .setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-lg) 0;
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .setting-row:last-child {
+      border-bottom: none;
+    }
+
+    .setting-label {
+      font-family: var(--font-pixel-cn);
+      font-size: var(--font-size-sm);
+      color: var(--color-text);
+      min-width: 120px;
+    }
+
+    .setting-control {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+    }
+
+    /* === Pixel Toggle Switch === */
+    .pixel-toggle {
+      width: 24px;
+      height: 12px;
+      background: var(--color-border);
+      border: 1px solid var(--color-border-bright);
+      cursor: pointer;
+      position: relative;
+      transition: background var(--transition-fast);
+      flex-shrink: 0;
+    }
+
+    .pixel-toggle .toggle-knob {
+      position: absolute;
+      top: 1px;
+      left: 1px;
+      width: 10px;
+      height: 10px;
+      background: var(--color-text-dim);
+      transition: left var(--transition-fast);
+    }
+
+    .pixel-toggle.on {
+      background: var(--color-primary);
+      border-color: var(--color-primary-bright);
+    }
+
+    .pixel-toggle.on .toggle-knob {
+      left: 13px;
+      background: var(--color-text-bright);
+    }
+
+    /* === Pixel Range Slider === */
+    .pixel-range {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+      width: 200px;
+    }
+
+    .pixel-range-track {
+      flex: 1;
+      height: 8px;
+      background: var(--color-bg-deep);
+      border: 1px solid var(--color-border);
+      position: relative;
+      cursor: pointer;
+    }
+
+    .pixel-range-fill {
+      height: 100%;
+      background: var(--color-primary);
+      transition: width var(--transition-fast);
+    }
+
+    .pixel-range-handle {
+      position: absolute;
+      top: -2px;
+      width: 4px;
+      height: 12px;
+      background: var(--color-text-bright);
+      border: 1px solid var(--color-border-bright);
+      transition: left var(--transition-fast);
+    }
+
+    .pixel-range-value {
+      font-family: var(--font-pixel);
+      font-size: var(--font-size-xs);
+      color: var(--color-text-dim);
+      min-width: 32px;
+      text-align: right;
+    }
+
+    /* === Pixel Select (Dropdown) === */
+    .pixel-select-wrapper {
+      position: relative;
+      width: 160px;
+    }
+
+    .pixel-select-display {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      padding: var(--space-sm) var(--space-md);
+      background: var(--color-bg-deep);
+      border: var(--border-normal);
+      color: var(--color-text);
+      font-family: var(--font-pixel-cn);
+      font-size: var(--font-size-sm);
+      cursor: pointer;
+    }
+
+    .pixel-select-arrow {
+      width: 0;
+      height: 0;
+      border-left: 4px solid transparent;
+      border-right: 4px solid transparent;
+      border-top: 6px solid var(--color-text-dim);
+    }
+
+    .pixel-select-dropdown {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      width: 100%;
+      background: var(--color-bg-surface);
+      border: var(--border-normal);
+      border-top: none;
+      z-index: var(--z-overlay);
+    }
+
+    .pixel-select-dropdown.open {
+      display: block;
+    }
+
+    .pixel-select-option {
+      padding: var(--space-sm) var(--space-md);
+      font-family: var(--font-pixel-cn);
+      font-size: var(--font-size-sm);
+      color: var(--color-text);
+      cursor: pointer;
+    }
+
+    .pixel-select-option:hover {
+      background: var(--color-primary-bg);
+      color: var(--color-primary-bright);
+    }
+
+    .pixel-select-option.selected {
+      color: var(--color-primary-bright);
+    }
+
+    /* === Level Button Group === */
+    .level-btn-group {
+      display: flex;
+      gap: var(--space-xs);
+    }
+
+    .level-btn {
+      font-family: var(--font-pixel-cn);
+      font-size: var(--font-size-xs);
+      padding: var(--space-sm) var(--space-md);
+      background: var(--color-bg-deep);
+      border: 1px solid var(--color-border);
+      color: var(--color-text-dim);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .level-btn:hover {
+      border-color: var(--color-primary);
+      color: var(--color-text);
+    }
+
+    .level-btn.active {
+      border: 2px solid var(--color-primary);
+      color: var(--color-primary-bright);
+      background: var(--color-primary-bg);
+      animation: border-glow-fire 1.6s steps(4, end) infinite;
+    }
+
+    /* === Key Binding Row === */
+    .keybind-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-md) 0;
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .keybind-action {
+      font-family: var(--font-pixel-cn);
+      font-size: var(--font-size-sm);
+      color: var(--color-text);
+    }
+
+    .keybind-key {
+      font-family: var(--font-pixel);
+      font-size: var(--font-size-xs);
+      padding: var(--space-xs) var(--space-sm);
+      background: var(--color-bg-deep);
+      border: 1px solid var(--color-border-bright);
+      color: var(--color-secondary);
+      min-width: 48px;
+      text-align: center;
+      cursor: pointer;
+    }
+
+    .keybind-key:hover {
+      border-color: var(--color-secondary);
+    }
+
+    /* === Footer Actions === */
+    .settings-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: var(--space-md);
+      margin-top: var(--space-2xl);
+    }
+
+    /* === Section Title === */
+    .section-title {
+      font-family: var(--font-pixel-cn);
+      font-size: var(--font-size-sm);
+      color: var(--color-fire);
+      margin-bottom: var(--space-lg);
+      padding-bottom: var(--space-sm);
+      border-bottom: 1px solid var(--color-border);
+    }
+  </style>
+<script>
+(function () {
+  /* --- Tab Switching --- */
+  const tabBtns = document.querySelectorAll('.tab-btn');
+  const panels  = document.querySelectorAll('.tab-panel');
+
+  tabBtns.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var target = this.getAttribute('data-tab');
+
+      tabBtns.forEach(function (b) { b.classList.remove('active'); });
+      panels.forEach(function (p) { p.classList.remove('active'); });
+
+      this.classList.add('active');
+      var panel = document.getElementById('panel-' + target);
+      if (panel) panel.classList.add('active');
+    });
+  });
+
+  /* --- Toggle Switches --- */
+  document.querySelectorAll('.pixel-toggle').forEach(function (toggle) {
+    toggle.addEventListener('click', function () {
+      this.classList.toggle('on');
+    });
+  });
+
+  /* --- Level Button Groups --- */
+  document.querySelectorAll('.level-btn-group').forEach(function (group) {
+    group.querySelectorAll('.level-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        group.querySelectorAll('.level-btn').forEach(function (b) { b.classList.remove('active'); });
+        this.classList.add('active');
+      });
+    });
+  });
+
+  /* --- Custom Select Dropdowns --- */
+  document.querySelectorAll('.pixel-select-wrapper').forEach(function (wrapper) {
+    var display  = wrapper.querySelector('.pixel-select-display');
+    var dropdown = wrapper.querySelector('.pixel-select-dropdown');
+    var valueSpan = display.querySelector('span');
+
+    display.addEventListener('click', function (e) {
+      e.stopPropagation();
+      // Close other open dropdowns
+      document.querySelectorAll('.pixel-select-dropdown.open').forEach(function (dd) {
+        if (dd !== dropdown) dd.classList.remove('open');
+      });
+      dropdown.classList.toggle('open');
+    });
+
+    dropdown.querySelectorAll('.pixel-select-option').forEach(function (option) {
+      option.addEventListener('click', function () {
+        valueSpan.textContent = this.textContent;
+        dropdown.querySelectorAll('.pixel-select-option').forEach(function (o) { o.classList.remove('selected'); });
+        this.classList.add('selected');
+        dropdown.classList.remove('open');
+      });
+    });
+  });
+
+  // Close dropdowns when clicking outside
+  document.addEventListener('click', function () {
+    document.querySelectorAll('.pixel-select-dropdown.open').forEach(function (dd) {
+      dd.classList.remove('open');
+    });
+  });
+
+  /* --- Pixel Range Sliders (click-to-set) --- */
+  document.querySelectorAll('.pixel-range').forEach(function (slider) {
+    var track = slider.querySelector('.pixel-range-track');
+    var fill  = slider.querySelector('.pixel-range-fill');
+    var handle = slider.querySelector('.pixel-range-handle');
+    var valueLabel = slider.querySelector('.pixel-range-value');
+
+    function setValue(pct) {
+      pct = Math.max(0, Math.min(100, Math.round(pct)));
+      fill.style.width = pct + '%';
+      handle.style.left = 'calc(' + pct + '% - 2px)';
+      valueLabel.textContent = pct + '%';
+      slider.setAttribute('data-value', pct);
+    }
+
+    track.addEventListener('click', function (e) {
+      var rect = track.getBoundingClientRect();
+      var pct  = ((e.clientX - rect.left) / rect.width) * 100;
+      setValue(pct);
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
