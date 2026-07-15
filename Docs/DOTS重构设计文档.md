@@ -25,14 +25,113 @@
 
 ### 程序集定义（新建）
 
+采用 HybridCLR 热更新架构，整体收敛为 **AOT + Hotfix 两个程序集**，命名空间与程序集一一对应：
+
 ```
-Assets/Scripts/NoitaCA/
-├── NoitaCA.Core.asmdef          # DOTS 组件、共享数据
-├── NoitaCA.Simulation.asmdef    # ISystem 作业（移动、交互）
-├── NoitaCA.Renderer.asmdef      # MonoBehaviour 渲染桥接层
-├── NoitaCA.Gameplay.asmdef      # 玩家、法术、生物、装备
-└── NoitaCA.Editor.asmdef        # 仅编辑器工具
+Assets/Scripts/
+├── AOT/
+│   └── AOT.asmdef        # 命名空间 AOT  —— 确定性 DOTS 核心 + 共享数据 + 渲染桥接
+└── Hotfix/
+    └── Hotfix.asmdef     # 命名空间 Hotfix —— 可热更的玩法/内容/UI/元数据
 ```
+
+- **AOT 只保留一个程序集**：不按 Core / Simulation / Renderer / Gameplay 过度拆分子程序集。
+  AOT 承载所有确定性、需 Burst 编译、不可热更的 DOTS 核心：像素组件、网格元数据、
+  模拟配置、Movement / Interaction / Creature / Spell / RenderBridge 等 ISystem、MaterialDatabase。
+- **Hotfix 即单个 Hotfix 程序集**：承载可热更新的玩法与内容（法术/材料反应定义表、生物/装备配置、
+  玩家输入映射、UI 流程、元数据与埋点），直接作为 Hotfix.dll 由 HybridCLR 运行时加载。
+- **依赖方向单向**：`Hotfix` 引用 `AOT`；`AOT` 严禁反向引用 `Hotfix`，否则破坏热更新隔离。
+- 编辑器工具（StressTest 覆盖层等）保留为独立 Editor 程序集，不进 AOT / Hotfix 主链路。
+
+---
+
+## 2.1 命名空间与程序集示例
+
+### 2.1.1 AOT.asmdef
+
+```json
+{
+    "name": "AOT",
+    "rootNamespace": "AOT",
+    "references": [
+        "Unity.Entities",
+        "Unity.Entities.Graphics",
+        "Unity.Burst",
+        "Unity.Collections",
+        "Unity.Mathematics",
+        "Unity.Serialization",
+        "Unity.Physics"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
+```
+
+### 2.1.2 Hotfix.asmdef
+
+```json
+{
+    "name": "Hotfix",
+    "rootNamespace": "Hotfix",
+    "references": [
+        "AOT",
+        "Unity.Entities",
+        "Unity.Mathematics",
+        "YooAsset"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
+```
+
+> Hotfix.asmdef 须登记到 HybridCLR 的 `hotfixAssembly` 列表，并由构建流程产出 `Hotfix.dll`；
+> AOT.asmdef 随主包 IL2CPP 编译进二进制，不参与热更。
+
+### 2.1.3 命名空间示例
+
+AOT 核心组件（`namespace AOT;`）：
+
+```csharp
+// AOT/Core/Components/PixelData.cs
+namespace AOT;
+
+public struct PixelData : IComponentData
+{
+    public byte MaterialType;
+    public byte Flags;
+    // ... 其余字段同 §4.1
+}
+```
+
+Hotfix 可热更定义表（`namespace Hotfix;`）：
+
+```csharp
+// Hotfix/Gameplay/Definitions/SpellDefinitions.cs
+namespace Hotfix;
+
+// 法术 / 材料反应定义表：可热更，不进入确定性热路径
+public static class SpellDefinitions
+{
+    // 数据驱动的法术参数与材料反应规则在此配置
+}
+```
+
+**约定**：AOT 目录下所有文件统一 `namespace AOT;`，Hotfix 目录下所有文件统一 `namespace Hotfix;`，
+与各自 .asmdef 的 `rootNamespace` 保持一致，避免命名空间与程序集错位。
 
 ---
 
@@ -72,12 +171,14 @@ Assets/Scripts/NoitaCA/
 ### 4.1 核心像素组件
 
 ```csharp
-// NoitaCA.Core/Components/PixelData.cs
+// AOT/Core/Components/PixelData.cs
+namespace AOT;
+
 public struct PixelData : IComponentData
 {
     public byte MaterialType;      // MaterialType 枚举（12 种材质）
-    public float Temperature;      // 温度
-    public float Lifetime;         // 生命周期
+    public short Temperature;      // 温度（定点：°C × 100，确定性，禁用 float）
+    public short Lifetime;         // 生命周期（定点：秒 × 100，确定性，禁用 float）
     public byte Density;           // 气体/液体/粉末排序用
     public byte FallingFrames;     // 重力累积帧数
     public ushort Color;           // 打包 RGB565，提升缓存效率
@@ -87,7 +188,7 @@ public struct PixelData : IComponentData
 }
 ```
 
-**为什么用 byte/ushort？** 原 `struct Pixel` 占 48+ 字节，12 种材质类型用 1 字节、密度 1 字节、颜色 RGB565 用 2 字节，压缩到 **16 字节/像素**，IJobChunk 缓存命中率提升约 3 倍。
+**为什么用短整型定点而非 float？** 落沙模拟必须确定性（帧同步 30Hz），所有世界状态字段禁用 `float`。温度/生命周期用 `short` 存「实际值 × 100」定点，速度 `VelocityX/Y` 同理（见下方字段）。原 `struct Pixel` 占 48+ 字节，12 种材质类型用 1 字节、密度 1 字节、颜色 RGB565 用 2 字节、温度/寿命用 `short`，压缩到 **14 字节/像素**，IJobChunk 缓存命中率提升约 3 倍。
 
 ### 4.2 网格元数据组件
 
@@ -119,7 +220,7 @@ public struct SimulationConfig : IComponentData
 {
     public int SimulationMode;    // 0=全扫描, 1=活跃像素, 2=分块
     public int ProcessingBudget;  // 每步最大处理像素数
-    public float AmbientTemperature; // 环境温度
+    public short AmbientTemperature; // 环境温度（定点：°C × 100，确定性，禁用 float）
 }
 ```
 
@@ -132,6 +233,9 @@ public struct SimulationConfig : IComponentData
 **替代**：`MovementSystem.cs`（MonoBehaviour，约 200 行）
 
 ```csharp
+// AOT/Simulation/MovementSystem.cs
+namespace AOT;
+
 [BurstCompile]
 public partial struct MovementSystem : ISystem
 {
@@ -176,6 +280,9 @@ public struct MovementJob : IJobChunk
 **替代**：`InteractionSystem.cs`（约 150 行）
 
 ```csharp
+// AOT/Simulation/InteractionSystem.cs
+namespace AOT;
+
 [BurstCompile]
 public partial struct InteractionSystem : ISystem
 {
@@ -204,6 +311,9 @@ public partial struct InteractionSystem : ISystem
 **替代**：`PixelCreature.cs` MonoBehaviour AI 逻辑
 
 ```csharp
+// AOT/Simulation/CreatureAISystem.cs
+namespace AOT;
+
 [BurstCompile]
 public partial struct CreatureAISystem : ISystem
 {
@@ -221,6 +331,9 @@ public partial struct CreatureAISystem : ISystem
 **替代**：`SpellController.cs` MonoBehaviour 施法逻辑
 
 ```csharp
+// AOT/Simulation/SpellSystem.cs
+namespace AOT;
+
 [BurstCompile]
 public partial struct SpellSystem : ISystem
 {
@@ -238,6 +351,9 @@ public partial struct SpellSystem : ISystem
 **替代**：`PixelWorldRenderer.cs` 的部分逻辑
 
 ```csharp
+// AOT/Renderer/RenderBridgeSystem.cs
+namespace AOT;
+
 public partial struct RenderBridgeSystem : ISystem
 {
     public void OnUpdate(ref SystemState state)
@@ -255,22 +371,25 @@ public partial struct RenderBridgeSystem : ISystem
 
 ### 6.1 使用场景
 
-| 场景 | ZLinq 用法 |
+> **AGENTS.md 全局禁令**：禁止 lambda 表达式与匿名委托。ZLinq 的谓词/选择器一律用本地函数（方法组）传入，下表仅展示方法组形式，本地函数定义略。
+
+| 场景 | ZLinq 用法（本地函数，禁 lambda） |
 |---|---|
-| 查询活跃像素 | `pixelData.Where(p => p.IsAlive()).Select(p => p.Position)` |
-| 生物注册表查找 | `creatures.Where(c => c.Health > 0).OrderBy(c => c.DistanceToPlayer)` |
-| 法术目标选择 | `enemies.InCircle(center, radius).MinBy(e => e.Distance)` |
-| 装备背包 | `inventory.Where(e => e.IsEquipped).Select(e => e.Ability)` |
-| 调试统计 | `stats.Where(s => s.Mode == ChunkBased).Average(s => s.SimMs)` |
+| 查询活跃像素 | `pixelData.Where(IsAlive).Select(GetPosition)` |
+| 生物注册表查找 | `creatures.Where(HpPositive).OrderBy(ByDistanceToPlayer)` |
+| 法术目标选择 | `enemies.InCircle(center, radius).MinBy(ByDistance)` |
+| 装备背包 | `inventory.Where(IsEquipped).Select(GetAbility)` |
+| 调试统计 | `stats.Where(IsChunkMode).Average(GetSimMs)` |
 
 ### 6.2 零分配模式
 
 ```csharp
-// 之前（每帧分配 GC）
+// 之前（每帧分配 GC，且使用 lambda 违反 AGENTS.md 禁令）
 var active = pixels.Where(p => p.IsActive).ToList();
 
-// 之后（零分配）
-foreach (var pixel in pixels.AsRef().Where(p => p.IsActive))
+// 之后（零分配；按 AGENTS.md 全局禁用 lambda，谓词用本地函数替代）
+bool IsActive(PixelData pixel) => pixel.IsAlive();
+foreach (var pixel in pixels.AsRef().Where(IsActive))
 {
     ProcessPixel(pixel);
 }
@@ -359,7 +478,7 @@ async UniTask CastSpellAsync(SpellElement element, CancellationToken ct)
 
 ### 阶段一：基础搭建（第 1-3 天）
 - [ ] 添加 DOTS 包到 manifest.json
-- [ ] 创建程序集定义（NoitaCA.Core、Simulation、Renderer、Gameplay、Editor）
+- [ ] 创建程序集定义（AOT.asmdef + Hotfix.asmdef，见 §2 / §2.1）
 - [ ] 定义 PixelData、GridSize、SimulationConfig 组件
 - [ ] 创建 WorldChunkEntity 工厂（PixelGrid → ECS 实体转换）
 - [ ] 保留现有 MonoBehaviour 渲染作为回退方案
@@ -410,21 +529,25 @@ async UniTask CastSpellAsync(SpellElement element, CancellationToken ct)
 
 ## 11. 文件迁移映射
 
-| 旧文件（MonoBehaviour） | 新文件（DOTS） | 阶段 |
-|---|---|---|
-| `Simulation/Pixel.cs` | `Core/Components/PixelData.cs` | 1 |
-| `Simulation/PixelGrid.cs` | `Core/WorldChunkEntity.cs` | 1 |
-| `Simulation/PixelSimulation.cs` | `Simulation/SimulationTickSystem.cs` | 2 |
-| `Simulation/MovementSystem.cs` | `Simulation/MovementSystem.cs`（ISystem） | 2 |
-| `Simulation/InteractionSystem.cs` | `Simulation/InteractionSystem.cs`（ISystem） | 2 |
-| `Simulation/MaterialDatabase.cs` | `Core/MaterialDatabase.cs`（NativeArray） | 1 |
-| `PixelWorldRenderer.cs` | `Renderer/RenderBridgeSystem.cs` | 3 |
-| `PlayerController.cs` | `Gameplay/PlayerSystem.cs` + MonoBehaviour 外壳 | 4 |
-| `SpellController.cs` | `Gameplay/SpellSystem.cs` | 4 |
-| `Creatures/PixelCreature.cs` | `Gameplay/CreatureAISystem.cs` | 4 |
-| `Equipment/*.cs` | `Gameplay/EquipmentSystem.cs` | 4 |
-| `Demo/StressTestDebugOverlay.cs` | `Editor/StressTestOverlay.cs`（ZString） | 5 |
-| `Demo/StressTestPerformancePanel.cs` | `Editor/StressTestPanel.cs`（ZString） | 5 |
+| 旧文件（MonoBehaviour） | 新文件（DOTS） | 程序集 | 阶段 |
+|---|---|---|---|
+| `Simulation/Pixel.cs` | `AOT/Core/Components/PixelData.cs` | AOT | 1 |
+| `Simulation/PixelGrid.cs` | `AOT/Core/WorldChunkEntity.cs` | AOT | 1 |
+| `Simulation/PixelSimulation.cs` | `AOT/Simulation/SimulationTickSystem.cs` | AOT | 2 |
+| `Simulation/MovementSystem.cs` | `AOT/Simulation/MovementSystem.cs`（ISystem） | AOT | 2 |
+| `Simulation/InteractionSystem.cs` | `AOT/Simulation/InteractionSystem.cs`（ISystem） | AOT | 2 |
+| `Simulation/MaterialDatabase.cs` | `AOT/Core/MaterialDatabase.cs`（NativeArray） | AOT | 1 |
+| `PixelWorldRenderer.cs` | `AOT/Renderer/RenderBridgeSystem.cs` | AOT | 3 |
+| `PlayerController.cs` | `AOT/Gameplay/PlayerSystem.cs`（ISystem）+ MonoBehaviour 外壳 | AOT | 4 |
+| `SpellController.cs` | `AOT/Gameplay/SpellSystem.cs`（ISystem） | AOT | 4 |
+| `Creatures/PixelCreature.cs` | `AOT/Gameplay/CreatureAISystem.cs`（ISystem） | AOT | 4 |
+| `Equipment/*.cs` | `AOT/Gameplay/EquipmentSystem.cs`（ISystem） | AOT | 4 |
+| （新增）法术 / 材料反应定义表 | `Hotfix/Gameplay/Definitions/SpellDefinitions.cs` | Hotfix | 4 |
+| （新增）生物 / 装备配置表 | `Hotfix/Gameplay/Definitions/ContentTables.cs` | Hotfix | 4 |
+| `Demo/StressTestDebugOverlay.cs` | `Editor/StressTestOverlay.cs`（ZString） | Editor | 5 |
+| `Demo/StressTestPerformancePanel.cs` | `Editor/StressTestPanel.cs`（ZString） | Editor | 5 |
+
+> **程序集归属原则**：所有确定性、需 Burst 编译、不可热更的 DOTS 核心（组件 / ISystem / 共享数据 / 渲染桥接）一律放 **AOT**；法术 / 材料反应 / 生物 / 装备等**可热更的定义表与配置**放 **Hotfix**；纯编辑器工具放独立 Editor 程序集。
 
 ---
 

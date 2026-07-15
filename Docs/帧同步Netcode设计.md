@@ -1341,7 +1341,7 @@ public static Fix64 operator *(Fix64 a, Fix64 b)
 - **Xorshift128Plus**: Vigna, *Further scramblings of Marsaglia's xorshift generators* — 确定性 PRNG
 - 项目文档:
   - [多人联机帧同步对战设计.md](./多人联机帧同步对战设计.md) — 总体架构
-  - [DOTS重构设计文档.md](../Client/Assets/Docs/DOTS重构设计文档.md) — DOTS 重构
+  - [DOTS重构设计文档.md](./DOTS重构设计文档.md) — DOTS 重构
   - [PixelGrid.cs](../Client/Assets/Scripts/AOT/Simulation/PixelGrid.cs) — changedChunks 机制
   - [OuterMessage.proto](../Tools/NetworkProtocol/Outer/OuterMessage.proto) — 协议定义
 

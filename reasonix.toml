@@ -1,0 +1,7 @@
+[permissions]
+allow = ["run_skill"]
+
+
+[agent]
+plan_mode_read_only_commands = ["New-Item -ItemType"]
+
